@@ -64,8 +64,9 @@ void main() async {
 
   print('Scraping completed. Extracted ${allJobs.length} jobs.');
 
-  final file = File('../jobs.json');
+  final file = File('jobs.json');
   await file.writeAsString(jsonEncode(allJobs));
 
   print('Saved output to jobs.json');
+  exit(0);
 }
