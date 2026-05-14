@@ -590,7 +590,7 @@ class ScraperService {
 
         final random = math.Random();
         const totalEstimatedPages = 834;
-        const pagesToScrape = 200;
+        const pagesToScrape = 834;
         const batchSize = 10;
 
         // Generate 200 unique random page numbers
@@ -1134,9 +1134,13 @@ class ScraperService {
 
     if (host.contains('jumpcrypto.com')) {
       try {
-        final apiUri = Uri.parse('https://boards-api.greenhouse.io/v1/boards/jumpcrypto/jobs?content=true');
-        final response = await _client.get(apiUri).timeout(const Duration(seconds: 15));
-        
+        final apiUri = Uri.parse(
+          'https://boards-api.greenhouse.io/v1/boards/jumpcrypto/jobs?content=true',
+        );
+        final response = await _client
+            .get(apiUri)
+            .timeout(const Duration(seconds: 15));
+
         if (response.statusCode == 200) {
           final decoded = jsonDecode(response.body);
           if (decoded is Map && decoded['jobs'] is List) {
@@ -1144,10 +1148,12 @@ class ScraperService {
             for (final item in (decoded['jobs'] as List).whereType<Map>()) {
               final title = (item['title'] ?? '').toString().trim();
               if (title.isEmpty) continue;
-              
+
               final applyLink = (item['absolute_url'] ?? '').toString().trim();
-              final location = (item['location']?['name'] ?? 'Not specified').toString().trim();
-              
+              final location = (item['location']?['name'] ?? 'Not specified')
+                  .toString()
+                  .trim();
+
               rows.add(
                 ScanResultRow(
                   company: companyName,
@@ -1179,7 +1185,9 @@ class ScraperService {
           return const [];
         }
 
-        final regExp = RegExp(r'&quot;job_id&quot;:\[0,&quot;([^&]+)&quot;\],&quot;job_location&quot;:\[0,&quot;([^&]+)&quot;\],&quot;job_title&quot;:\[0,&quot;([^&]+)&quot;\]');
+        final regExp = RegExp(
+          r'&quot;job_id&quot;:\[0,&quot;([^&]+)&quot;\],&quot;job_location&quot;:\[0,&quot;([^&]+)&quot;\],&quot;job_title&quot;:\[0,&quot;([^&]+)&quot;\]',
+        );
         final matches = regExp.allMatches(pageHtml);
 
         for (final m in matches) {
@@ -1215,52 +1223,67 @@ class ScraperService {
         final rows = <ScanResultRow>[];
         final seen = <String>{};
         final query = keywords.isEmpty ? '' : keywords.join(' ');
-        
+
         final startRows = [0, 51, 102];
-        
-        await Future.wait(startRows.map((start) async {
-          final uri = Uri.parse('https://jobs.kellanova.com/search/?q=$query&sortColumn=referencedate&sortDirection=desc&startrow=$start');
-          try {
-            final response = await _client.get(uri, headers: {
-              'User-Agent': userAgents[math.Random().nextInt(userAgents.length)],
-            }).timeout(const Duration(seconds: 15));
-            
-            if (response.statusCode == 200) {
-              final doc = html_parser.parse(response.body);
-              final jobLinks = doc.querySelectorAll('a.jobTitle-link');
-              
-              for (final link in jobLinks) {
-                final title = link.text.trim();
-                if (title.isEmpty) continue;
-                
-                final path = link.attributes['href'];
-                final applyLink = path != null ? 'https://jobs.kellanova.com$path' : uri.toString();
-                final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
-                
-                if (!seen.contains(key)) {
-                  seen.add(key);
-                  final row = link.parent?.parent?.parent;
-                  final location = row?.querySelector('span.jobLocation')?.text.trim() ?? 'Not specified';
-                  
-                  rows.add(
-                    ScanResultRow(
-                      company: companyName,
-                      title: title,
-                      companyUrl: careerUri.toString(),
-                      applyLink: applyLink,
-                      location: location,
-                      duration: '—',
-                      deadline: '—',
-                      source: 'SuccessFactors Scan',
-                      error: '',
-                    ),
-                  );
+
+        await Future.wait(
+          startRows.map((start) async {
+            final uri = Uri.parse(
+              'https://jobs.kellanova.com/search/?q=$query&sortColumn=referencedate&sortDirection=desc&startrow=$start',
+            );
+            try {
+              final response = await _client
+                  .get(
+                    uri,
+                    headers: {
+                      'User-Agent':
+                          userAgents[math.Random().nextInt(userAgents.length)],
+                    },
+                  )
+                  .timeout(const Duration(seconds: 15));
+
+              if (response.statusCode == 200) {
+                final doc = html_parser.parse(response.body);
+                final jobLinks = doc.querySelectorAll('a.jobTitle-link');
+
+                for (final link in jobLinks) {
+                  final title = link.text.trim();
+                  if (title.isEmpty) continue;
+
+                  final path = link.attributes['href'];
+                  final applyLink = path != null
+                      ? 'https://jobs.kellanova.com$path'
+                      : uri.toString();
+                  final key =
+                      '${title.toLowerCase()}|${applyLink.toLowerCase()}';
+
+                  if (!seen.contains(key)) {
+                    seen.add(key);
+                    final row = link.parent?.parent?.parent;
+                    final location =
+                        row?.querySelector('span.jobLocation')?.text.trim() ??
+                        'Not specified';
+
+                    rows.add(
+                      ScanResultRow(
+                        company: companyName,
+                        title: title,
+                        companyUrl: careerUri.toString(),
+                        applyLink: applyLink,
+                        location: location,
+                        duration: '—',
+                        deadline: '—',
+                        source: 'SuccessFactors Scan',
+                        error: '',
+                      ),
+                    );
+                  }
                 }
               }
-            }
-          } catch (_) {}
-        }));
-        
+            } catch (_) {}
+          }),
+        );
+
         return rows;
       } catch (_) {
         return const [];
@@ -1278,78 +1301,81 @@ class ScraperService {
           'Business',
           'Data Science',
           'Product & Design',
-          'Risk, Policy & Underwriting'
+          'Risk, Policy & Underwriting',
         ];
 
-        await Future.wait(categories.map((cat) async {
-          final uri = Uri.parse('https://khatabook.com/hiring/recruiter/list?category=${Uri.encodeComponent(cat)}');
-          try {
-            final response = await _client.get(
-              uri,
-              headers: {
-                'Accept': 'application/json, text/javascript, */*; q=0.01',
-                'X-Requested-With': 'XMLHttpRequest',
-                'User-Agent': userAgents[math.Random().nextInt(userAgents.length)],
-              },
-            ).timeout(const Duration(seconds: 15));
+        await Future.wait(
+          categories.map((cat) async {
+            final uri = Uri.parse(
+              'https://khatabook.com/hiring/recruiter/list?category=${Uri.encodeComponent(cat)}',
+            );
+            try {
+              final response = await _client
+                  .get(
+                    uri,
+                    headers: {
+                      'Accept':
+                          'application/json, text/javascript, */*; q=0.01',
+                      'X-Requested-With': 'XMLHttpRequest',
+                      'User-Agent':
+                          userAgents[math.Random().nextInt(userAgents.length)],
+                    },
+                  )
+                  .timeout(const Duration(seconds: 15));
 
-            if (response.statusCode == 200) {
-              final decoded = jsonDecode(response.body);
-              final jobs = decoded['data']?['Jobs'];
-              if (jobs is List) {
-                for (final job in jobs) {
-                  final title = (job['JobTitle'] ?? '').toString().trim();
-                  if (title.isEmpty) continue;
+              if (response.statusCode == 200) {
+                final decoded = jsonDecode(response.body);
+                final jobs = decoded['data']?['Jobs'];
+                if (jobs is List) {
+                  for (final job in jobs) {
+                    final title = (job['JobTitle'] ?? '').toString().trim();
+                    if (title.isEmpty) continue;
 
-                  final applyLink = (job['ApplyUrl'] ?? '').toString().trim();
-                  if (applyLink.isEmpty) continue;
+                    final applyLink = (job['ApplyUrl'] ?? '').toString().trim();
+                    if (applyLink.isEmpty) continue;
 
-                  final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
-                  if (!seen.contains(key)) {
-                    seen.add(key);
-                    
-                    String location = 'Not specified';
-                    final rawLoc = job['Location'];
-                    if (rawLoc is String && rawLoc.startsWith('[')) {
-                      try {
-                        final locList = jsonDecode(rawLoc);
-                        if (locList is List && locList.isNotEmpty) {
-                          location = locList[0]['Address'] ?? 'Not specified';
-                        }
-                      } catch (_) {}
+                    final key =
+                        '${title.toLowerCase()}|${applyLink.toLowerCase()}';
+                    if (!seen.contains(key)) {
+                      seen.add(key);
+
+                      String location = 'Not specified';
+                      final rawLoc = job['Location'];
+                      if (rawLoc is String && rawLoc.startsWith('[')) {
+                        try {
+                          final locList = jsonDecode(rawLoc);
+                          if (locList is List && locList.isNotEmpty) {
+                            location = locList[0]['Address'] ?? 'Not specified';
+                          }
+                        } catch (_) {}
+                      }
+
+                      rows.add(
+                        ScanResultRow(
+                          company: companyName,
+                          title: title,
+                          companyUrl: careerUri.toString(),
+                          applyLink: applyLink,
+                          location: location,
+                          duration: '—',
+                          deadline: '—',
+                          source: 'Khatabook API Scan',
+                          error: '',
+                        ),
+                      );
                     }
-
-                    rows.add(
-                      ScanResultRow(
-                        company: companyName,
-                        title: title,
-                        companyUrl: careerUri.toString(),
-                        applyLink: applyLink,
-                        location: location,
-                        duration: '—',
-                        deadline: '—',
-                        source: 'Khatabook API Scan',
-                        error: '',
-                      ),
-                    );
                   }
                 }
               }
-            }
-          } catch (_) {}
-        }));
+            } catch (_) {}
+          }),
+        );
 
         return rows;
       } catch (_) {
         return const [];
       }
     }
-
-
-
-
-
-
 
     if (host.contains('illuvium.io')) {
       try {
@@ -8526,16 +8552,23 @@ class ScraperService {
     }
 
     // SuccessFactors (SAP) - Kellanova, etc.
-    if (host.contains('jobs.') && (host.endsWith('.com') || host.contains('successfactors'))) {
+    if (host.contains('jobs.') &&
+        (host.endsWith('.com') || host.contains('successfactors'))) {
       try {
-        final response = await _client.get(careerUri, headers: {
-          'User-Agent': userAgents[math.Random().nextInt(userAgents.length)],
-        }).timeout(const Duration(seconds: 15));
+        final response = await _client
+            .get(
+              careerUri,
+              headers: {
+                'User-Agent':
+                    userAgents[math.Random().nextInt(userAgents.length)],
+              },
+            )
+            .timeout(const Duration(seconds: 15));
 
         if (response.statusCode == 200) {
           final document = html_parser.parse(response.body);
           final rows = <ScanResultRow>[];
-          
+
           // SuccessFactors usually uses a table with class 'job-tile' or links starting with /job/
           final jobLinks = document.querySelectorAll('a').where((e) {
             final href = e.attributes['href'] ?? '';
@@ -8555,7 +8588,9 @@ class ScraperService {
             var location = 'Not specified';
             final parent = link.parent;
             if (parent != null) {
-              final locElem = parent.querySelector('.location, .jobLocation, .job-location');
+              final locElem = parent.querySelector(
+                '.location, .jobLocation, .job-location',
+              );
               if (locElem != null) {
                 location = locElem.text.trim();
               }
@@ -8583,12 +8618,14 @@ class ScraperService {
     // Eightfold.ai (Kraft Heinz, Starbucks, etc.)
     if (host.contains('eightfold.ai') || host.contains('jobs.kraftheinz.com')) {
       try {
-        final domain = host.contains('kraftheinz.com') ? 'kraftheinz.com' : host;
+        final domain = host.contains('kraftheinz.com')
+            ? 'kraftheinz.com'
+            : host;
         final apiUrl = Uri.parse('https://$host/api/v1/get_objects');
-        
+
         final query = keywords.isEmpty ? '' : keywords.join(' ');
         final rows = <ScanResultRow>[];
-        
+
         final payload = {
           "query": query,
           "start": 0,
@@ -8596,17 +8633,20 @@ class ScraperService {
           "domain": domain,
         };
 
-        final response = await _client.post(
-          apiUrl,
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-            'User-Agent': userAgents[math.Random().nextInt(userAgents.length)],
-            'Referer': careerUri.toString(),
-          },
-          body: jsonEncode(payload),
-        ).timeout(const Duration(seconds: 15));
+        final response = await _client
+            .post(
+              apiUrl,
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'User-Agent':
+                    userAgents[math.Random().nextInt(userAgents.length)],
+                'Referer': careerUri.toString(),
+              },
+              body: jsonEncode(payload),
+            )
+            .timeout(const Duration(seconds: 15));
 
         if (response.statusCode == 200) {
           final decoded = jsonDecode(response.body);
@@ -8617,8 +8657,11 @@ class ScraperService {
               if (title.isEmpty) continue;
 
               final id = (job['id'] ?? '').toString().trim();
-              final location = (job['location'] ?? 'Not specified').toString().trim();
-              final applyLink = 'https://$host/careers/job?domain=$domain&pid=$id';
+              final location = (job['location'] ?? 'Not specified')
+                  .toString()
+                  .trim();
+              final applyLink =
+                  'https://$host/careers/job?domain=$domain&pid=$id';
 
               rows.add(
                 ScanResultRow(
@@ -8637,39 +8680,42 @@ class ScraperService {
             if (rows.isNotEmpty) return rows;
           }
         }
-        
+
         // Fallback to Rendered HTML if API fails or returns no jobs
         final html = await _fetchRendered(careerUri);
         if (html != null && html.isNotEmpty) {
-           final document = html_parser.parse(html);
-           // Selector based on browser subagent findings
-           final cards = document.querySelectorAll('a[id^="job-card-"], a.card-F1ebU');
-           for (final card in cards) {
-             final titleElem = card.querySelector('div:first-child div:first-child') ?? card;
-             final title = titleElem.text.trim();
-             if (title.isEmpty) continue;
-             
-             var href = card.attributes['href'] ?? '';
-             if (!href.startsWith('http')) {
-               href = 'https://$host$href';
-             }
-             
-             rows.add(
-                ScanResultRow(
-                  company: companyName,
-                  title: title,
-                  companyUrl: careerUri.toString(),
-                  applyLink: href,
-                  location: 'Check site',
-                  duration: '—',
-                  deadline: '—',
-                  source: 'Eightfold DOM Scan',
-                  error: '',
-                ),
-              );
-           }
+          final document = html_parser.parse(html);
+          // Selector based on browser subagent findings
+          final cards = document.querySelectorAll(
+            'a[id^="job-card-"], a.card-F1ebU',
+          );
+          for (final card in cards) {
+            final titleElem =
+                card.querySelector('div:first-child div:first-child') ?? card;
+            final title = titleElem.text.trim();
+            if (title.isEmpty) continue;
+
+            var href = card.attributes['href'] ?? '';
+            if (!href.startsWith('http')) {
+              href = 'https://$host$href';
+            }
+
+            rows.add(
+              ScanResultRow(
+                company: companyName,
+                title: title,
+                companyUrl: careerUri.toString(),
+                applyLink: href,
+                location: 'Check site',
+                duration: '—',
+                deadline: '—',
+                source: 'Eightfold DOM Scan',
+                error: '',
+              ),
+            );
+          }
         }
-        
+
         return rows;
       } catch (_) {
         return const [];
@@ -8681,41 +8727,44 @@ class ScraperService {
       try {
         final html = await _fetchRendered(careerUri);
         if (html != null && html.isNotEmpty) {
-           final document = html_parser.parse(html);
-           final rows = <ScanResultRow>[];
-           
-           // Khatabook cards usually have titles in h3 or h4
-           final jobLinks = document.querySelectorAll('a').where((e) {
-             final text = e.text.toLowerCase();
-             return text.contains('apply') || text.contains('view') || text.contains('opening');
-           }).toList();
+          final document = html_parser.parse(html);
+          final rows = <ScanResultRow>[];
 
-           for (final link in jobLinks) {
-             final titleElem = link.parent?.querySelector('h1, h2, h3, h4, h5') ?? link;
-             final title = titleElem.text.trim();
-             if (title.isEmpty || title.length < 3) continue;
+          // Khatabook cards usually have titles in h3 or h4
+          final jobLinks = document.querySelectorAll('a').where((e) {
+            final text = e.text.toLowerCase();
+            return text.contains('apply') ||
+                text.contains('view') ||
+                text.contains('opening');
+          }).toList();
 
-             var href = link.attributes['href'] ?? '';
-             if (href.isEmpty) continue;
-             if (!href.startsWith('http')) {
-               href = 'https://khatabook.com$href';
-             }
+          for (final link in jobLinks) {
+            final titleElem =
+                link.parent?.querySelector('h1, h2, h3, h4, h5') ?? link;
+            final title = titleElem.text.trim();
+            if (title.isEmpty || title.length < 3) continue;
 
-             rows.add(
-               ScanResultRow(
-                 company: companyName,
-                 title: title,
-                 companyUrl: careerUri.toString(),
-                 applyLink: href,
-                 location: 'Remote/Bengaluru',
-                 duration: '—',
-                 deadline: '—',
-                 source: 'Khatabook DOM Scan',
-                 error: '',
-               ),
-             );
-           }
-           if (rows.isNotEmpty) return rows;
+            var href = link.attributes['href'] ?? '';
+            if (href.isEmpty) continue;
+            if (!href.startsWith('http')) {
+              href = 'https://khatabook.com$href';
+            }
+
+            rows.add(
+              ScanResultRow(
+                company: companyName,
+                title: title,
+                companyUrl: careerUri.toString(),
+                applyLink: href,
+                location: 'Remote/Bengaluru',
+                duration: '—',
+                deadline: '—',
+                source: 'Khatabook DOM Scan',
+                error: '',
+              ),
+            );
+          }
+          if (rows.isNotEmpty) return rows;
         }
       } catch (_) {}
     }
@@ -8727,7 +8776,7 @@ class ScraperService {
         if (html != null && html.isNotEmpty) {
           final document = html_parser.parse(html);
           final rows = <ScanResultRow>[];
-          
+
           // KreditBee uses job cards with "Apply" buttons in a slider
           // Based on DOM inspection, job titles are inside the cards
           final cards = document.querySelectorAll('div').where((e) {
@@ -8736,9 +8785,11 @@ class ScraperService {
           }).toList();
 
           for (final card in cards) {
-            final titleElem = card.querySelector('h1, h2, h3, h4, h5, div:first-child');
+            final titleElem = card.querySelector(
+              'h1, h2, h3, h4, h5, div:first-child',
+            );
             if (titleElem == null) continue;
-            
+
             final title = titleElem.text.trim();
             if (title.isEmpty) continue;
 
@@ -8747,7 +8798,10 @@ class ScraperService {
             var applyLink = anchor?.attributes['href'] ?? '';
             if (applyLink.isEmpty) {
               // Construct link from title if direct link not found
-              final slug = title.toLowerCase().replaceAll(' ', '-').replaceAll('"', '');
+              final slug = title
+                  .toLowerCase()
+                  .replaceAll(' ', '-')
+                  .replaceAll('"', '');
               applyLink = 'https://www.kreditbee.in/careers/$slug';
             } else if (!applyLink.startsWith('http')) {
               applyLink = 'https://www.kreditbee.in$applyLink';
@@ -8779,43 +8833,48 @@ class ScraperService {
         if (html != null && html.isNotEmpty) {
           final document = html_parser.parse(html);
           final rows = <ScanResultRow>[];
-          
+
           // Leap Finance uses job cards with titles and location/type on the right
           final cards = document.querySelectorAll('div').where((e) {
             final text = e.text.toLowerCase();
             // Catch any card that mentions job types (intern, full-time, etc.)
-            return text.contains('intern') || 
-                   text.contains('full time') || 
-                   text.contains('full-time') ||
-                   text.contains('contract') ||
-                   text.contains('permanent');
+            return text.contains('intern') ||
+                text.contains('full time') ||
+                text.contains('full-time') ||
+                text.contains('contract') ||
+                text.contains('permanent');
           }).toList();
 
           for (final card in cards) {
             // Find the title element (usually the largest text in the card)
-            final titleElem = card.querySelector('h1, h2, h3, h4, h5, div:first-child');
+            final titleElem = card.querySelector(
+              'h1, h2, h3, h4, h5, div:first-child',
+            );
             var title = titleElem?.text.trim() ?? '';
-            
+
             // If title is too short or just says "Bengaluru", try sibling or parent
             if (title.length < 5 || title == 'Bengaluru' || title == 'Remote') {
-              final allTexts = card.nodes.map((n) => n.text?.trim() ?? '').where((s) => s.isNotEmpty).toList();
+              final allTexts = card.nodes
+                  .map((n) => n.text?.trim() ?? '')
+                  .where((s) => s.isNotEmpty)
+                  .toList();
               if (allTexts.isNotEmpty) title = allTexts.first;
             }
-            
+
             if (title.isEmpty || title.length < 3) continue;
 
             // Link is usually the whole card or a chevron button
             var applyLink = card.attributes['href'] ?? '';
             if (applyLink.isEmpty) {
-               final anchor = card.querySelector('a');
-               applyLink = anchor?.attributes['href'] ?? '';
+              final anchor = card.querySelector('a');
+              applyLink = anchor?.attributes['href'] ?? '';
             }
-            
+
             if (applyLink.isEmpty || applyLink == '#') {
-               // Fallback: Construct a search link or use base
-               applyLink = 'https://careers.leapfinance.com/#openings';
+              // Fallback: Construct a search link or use base
+              applyLink = 'https://careers.leapfinance.com/#openings';
             } else if (!applyLink.startsWith('http')) {
-               applyLink = 'https://careers.leapfinance.com$applyLink';
+              applyLink = 'https://careers.leapfinance.com$applyLink';
             }
 
             final locationElem = card.querySelector('div:last-child') ?? card;
@@ -8827,7 +8886,9 @@ class ScraperService {
                 title: title,
                 companyUrl: careerUri.toString(),
                 applyLink: applyLink,
-                location: locationText.contains(',') ? locationText.split(',').first : 'Bengaluru',
+                location: locationText.contains(',')
+                    ? locationText.split(',').first
+                    : 'Bengaluru',
                 duration: '—',
                 deadline: '—',
                 source: 'Leap DOM Scan',
@@ -10286,7 +10347,8 @@ class ScraperService {
         final board = segments.first;
 
         // Dedicated Kraken logic if needed, otherwise use general Ashby fetch
-        if (board == 'kraken.com' || companyName.toLowerCase().contains('kraken')) {
+        if (board == 'kraken.com' ||
+            companyName.toLowerCase().contains('kraken')) {
           return await _fetchAshbyRows(
             board: 'kraken.com',
             companyName: 'Kraken',
