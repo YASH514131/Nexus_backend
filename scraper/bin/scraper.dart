@@ -1,33 +1,61 @@
 import 'dart:convert';
 import 'dart:io';
 
-void main(List<String> arguments) async {
-  print('Starting NEXUS Scraper...');
+import 'package:scraper/local_scraper/models.dart';
+import 'package:scraper/local_scraper/services/scraper_service.dart';
+import 'package:scraper/default_companies.dart';
 
-  // TODO: Add your scraping logic here
-  // Fetch from APIs or parse HTML, then generate the list of Job objects.
+void main() async {
+  print('Starting NEXUS Backend Scraper...');
 
-  // Example Job schema based on V3 Architecture:
-  final List<Map<String, dynamic>> jobs = [
-    {
-      "title": "Software Engineer",
-      "company": "Bank of America",
-      "companyUrl": "https://careers.bankofamerica.com",
-      "applyLink": "https://careers.bankofamerica.com/jobs/12345",
-      "location": "Bangalore, India",
-      "duration": "Full Time",
-      "deadline": "—",
-      "source": "Bank of America Jobs API",
-      "tags": ["fintech", "web3", "india"],
-      "isNew": true
+  final scraperService = ScraperService();
+
+  final companies = defaultCompanyUrls.entries
+      .map((e) => CompanyInput(name: e.key, url: e.value))
+      .toList();
+
+  final scanConfig = ScanConfig(
+    keywords: [], // Empty list allows all jobs because we modified fuzzyMatch
+    excludeKeywords: [], // No exclusion
+    scanLimit: 50,
+    concurrency: 4,
+    enableJs: false,
+    hardTimeoutSeconds: 40,
+  );
+
+  List<Map<String, dynamic>> allJobs = [];
+
+  for (final company in companies) {
+    print('Scraping \${company.name}...');
+    try {
+      final rows = await scraperService.scrapeCompany(company, scanConfig);
+      for (final row in rows) {
+        if (row.title == '—' || row.title == 'No internship found') {
+          continue;
+        }
+
+        allJobs.add({
+          "title": row.title,
+          "company": row.company,
+          "companyUrl": row.companyUrl,
+          "applyLink": row.applyLink,
+          "location": row.location,
+          "duration": row.duration,
+          "deadline": row.deadline,
+          "source": row.source,
+          "tags": [],
+          "isNew": true,
+        });
+      }
+    } catch (e) {
+      print('Error scraping \${company.name}: \$e');
     }
-  ];
+  }
 
-  print('Scraping completed. Extracted ${jobs.length} jobs.');
+  print('Scraping completed. Extracted \${allJobs.length} jobs.');
 
-  // Write the output to jobs.json in the parent directory so the workflow can zip it.
   final file = File('../jobs.json');
-  await file.writeAsString(jsonEncode(jobs));
+  await file.writeAsString(jsonEncode(allJobs));
 
   print('Saved output to jobs.json');
 }
