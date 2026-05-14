@@ -1,6 +1,9 @@
 name: NEXUS Scraper
 
 on:
+  push:
+    branches:
+      - main
   schedule:
     - cron: '0 */17 * * *'
   workflow_dispatch:           # allow manual trigger
