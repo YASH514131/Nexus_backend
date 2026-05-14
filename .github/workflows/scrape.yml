@@ -1,0 +1,73 @@
+name: NEXUS Scraper
+
+on:
+  schedule:
+    - cron: '0 */17 * * *'
+  workflow_dispatch:           # allow manual trigger
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dart-lang/setup-dart@v1
+
+      # 1. Run scraper → produces jobs.json
+      - name: Run scraper
+        run: |
+          cd scraper
+          dart pub get
+          dart run bin/scraper.dart
+          cd ..
+
+      # 2. Zip dataset
+      - name: Zip dataset
+        run: zip jobs.zip jobs.json
+
+      # 3. Generate sha256 hash of zip
+      - name: Generate hash
+        run: echo "HASH=$(sha256sum jobs.zip | cut -d' ' -f1)" >> $GITHUB_ENV
+
+      # 4. Upload jobs.zip to GitHub Releases (fallback / early scale)
+      - name: Upload to GitHub Releases
+        run: gh release upload latest jobs.zip --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 5. Upload jobs.zip to Hugging Face Datasets (primary at scale)
+      - name: Install huggingface_hub
+        run: pip install huggingface_hub
+
+      - name: Upload to Hugging Face
+        run: |
+          python3 -c "
+          from huggingface_hub import HfApi
+          HfApi().upload_file(
+            path_or_fileobj='jobs.zip',
+            path_in_repo='jobs.zip',
+            repo_id='Yash514311/nexus-jobs',
+            repo_type='dataset',
+            token='${{ secrets.HF_TOKEN }}'
+          )
+          print('Uploaded to Hugging Face successfully')
+          "
+
+      # 6. Update config.json with new hash + version
+      - name: Update config.json
+        run: |
+          echo '{
+            "version": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
+            "dataset_url": "https://huggingface.co/datasets/Yash514311/nexus-jobs/resolve/main/jobs.zip",
+            "hash": "'$HASH'",
+            "min_app_version": "3.0.0"
+          }' > docs/config.json
+
+      # 7. Push updated config.json to GitHub Pages
+      - name: Push config.json to GitHub Pages
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add docs/config.json
+          git commit -m "chore: update dataset config [skip ci]"
+          git push
