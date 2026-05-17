@@ -101,22 +101,25 @@ class ScraperService {
   ) async {
     final base = _normalize(company.url);
     final uri = Uri.parse(base);
+    final loweredHost = uri.host.toLowerCase();
 
-    final robotAllowed = await robotsOk(_client, uri);
-    if (!robotAllowed) {
-      return [
-        ScanResultRow(
-          company: company.name,
-          title: '—',
-          companyUrl: base,
-          applyLink: base,
-          location: '—',
-          duration: '—',
-          deadline: '—',
-          source: '—',
-          error: 'robots.txt disallowed',
-        ),
-      ];
+    if (!_isPrioritizedKnownApi(loweredHost)) {
+      final robotAllowed = await robotsOk(_client, uri);
+      if (!robotAllowed) {
+        return [
+          ScanResultRow(
+            company: company.name,
+            title: '—',
+            companyUrl: base,
+            applyLink: base,
+            location: '—',
+            duration: '—',
+            deadline: '—',
+            source: '—',
+            error: 'robots.txt disallowed',
+          ),
+        ];
+      }
     }
 
     final careerUri = await discoverCareerUrl(_client, uri);
@@ -166,102 +169,8 @@ class ScraperService {
       ];
     }
 
-    final loweredHost = careerUri.host.toLowerCase();
-    final shouldPrioritizeKnownApi =
-        loweredHost.contains('awign.com') ||
-        loweredHost.contains('gauntlet.xyz') ||
-        loweredHost.contains('search-careers.gm.com') ||
-        loweredHost.contains('bain.com') ||
-        loweredHost.contains('darwinbox.in') ||
-        loweredHost.contains('capitalonecareers.com') ||
-        loweredHost.contains('capgemini.com') ||
-        loweredHost.contains('myworkdaysite.com') ||
-        loweredHost.contains('myworkdayjobs.com') ||
-        loweredHost.contains('careers.breadfinancial.com') ||
-        loweredHost.contains('bitso.com') ||
-        loweredHost.contains('careers.blackline.com') ||
-        loweredHost.contains('jobs.blockchaincapital.com') ||
-        loweredHost.contains('block.xyz') ||
-        loweredHost.contains('blockchain.com') ||
-        loweredHost.contains('avature.net') ||
-        loweredHost.contains('jobs.ea.com') ||
-        loweredHost.contains('binance.com') ||
-        loweredHost.contains('bitcoinsuisse.com') ||
-        loweredHost.contains('greenhouse.io') ||
-        loweredHost.contains('careers.bcg.com') ||
-        loweredHost.contains('careers.bankofamerica.com') ||
-        loweredHost.contains('layerzero.network') ||
-        loweredHost.contains('oraclecloud.com') ||
-        loweredHost.contains('eightfold.ai') ||
-        loweredHost.contains('kraftheinz.com') ||
-        loweredHost.contains('kellanova.com') ||
-        loweredHost.contains('successfactors.com') ||
-        loweredHost.contains('recsolu.com') ||
-        loweredHost.contains('khatabook.com') ||
-        loweredHost.contains('workforcenow.adp.com') ||
-        loweredHost.contains('acko.com') ||
-        loweredHost.contains('cashfree.com') ||
-        loweredHost.contains('chaoslabs.xyz') ||
-        loweredHost.contains('artivatic.ai') ||
-        loweredHost.contains('att.jobs') ||
-        loweredHost.contains('careers.astrazeneca.com') ||
-        loweredHost.contains('careers.blackrock.com') ||
-        loweredHost.contains('careers.coupa.com') ||
-        loweredHost.contains('careers.cred.club') ||
-        loweredHost.contains('copper.co') ||
-        loweredHost.contains('cybrilla.com') ||
-        loweredHost.contains('dapperlabs.com') ||
-        loweredHost.contains('notion.site') ||
-        loweredHost.contains('instahyre.com') ||
-        loweredHost.contains('careers.kula.ai') ||
-        loweredHost.contains('jobs.apple.com') ||
-        loweredHost.contains('jobs.lever.co') ||
-        loweredHost.contains('jobs.ashbyhq.com') ||
-        loweredHost.contains('chainlinklabs.com') ||
-        loweredHost.contains('careers.ford.com') ||
-        loweredHost.contains('jobs.fidelity.com') ||
-        loweredHost.contains('finbox.in') ||
-        loweredHost.contains('careers.hcltech.com') ||
-        loweredHost.contains('hashgraph.com') ||
-        loweredHost.contains('hyperverge.co') ||
-        loweredHost.contains('apply.hp.com') ||
-        loweredHost.contains('careers.hp.com') ||
-        loweredHost.contains('jobs.reczee.com') ||
-        loweredHost.contains('finhaat.com') ||
-        loweredHost.contains('metacareers.com') ||
-        loweredHost.contains('etoro.com') ||
-        loweredHost.contains('www.exodus.com') ||
-        loweredHost.contains('careers.fabric.vc') ||
-        loweredHost.contains('eyglobal.yello.co') ||
-        loweredHost.contains('yello.co') ||
-        loweredHost.contains('careers.etsy.com') ||
-        loweredHost.contains('jobs.aon.com') ||
-        loweredHost.contains('jobs.thecignagroup.com') ||
-        loweredHost.contains('jobs.electriccapital.com') ||
-        loweredHost.contains('consensys.io') ||
-        loweredHost.contains('careers.circle.com') ||
-        loweredHost.contains('careers.cisco.com') ||
-        loweredHost.contains('careers.cognizant.com') ||
-        loweredHost.contains('jobs.gsk.com') ||
-        loweredHost.contains('careers.lilly.com') ||
-        loweredHost.contains('southasiacareers.deloitte.com') ||
-        loweredHost.contains('jobs.disneycareers.com') ||
-        loweredHost.contains('jobs.ebayinc.com') ||
-        loweredHost.contains('eigenlabs.org') ||
-        loweredHost.contains('zohorecruit.in') ||
-        loweredHost.contains('careers.dxc.com') ||
-        loweredHost.contains('jobs.comcast.com') ||
-        loweredHost.contains('jobs.citi.com') ||
-        loweredHost.contains('careers.coca-colacompany.com') ||
-        loweredHost.contains('dydx.exchange') ||
-        loweredHost.contains('coinbase.com') ||
-        loweredHost.contains('cwan.com') ||
-        loweredHost.contains('0x.org') ||
-        loweredHost.contains('www.google.com') ||
-        loweredHost.contains('amazon.jobs') ||
-        loweredHost.contains('accenture.com') ||
-        loweredHost.contains('careers.amd.com') ||
-        loweredHost.contains('careers.amgen.com');
+    final careerHost = careerUri.host.toLowerCase();
+    final shouldPrioritizeKnownApi = _isPrioritizedKnownApi(careerHost);
     if (shouldPrioritizeKnownApi) {
       final apiRows = await _fetchKnownJsonApiRows(
         companyName: company.name,
@@ -368,6 +277,103 @@ class ScraperService {
       ];
     }
     return rows;
+  }
+
+  bool _isPrioritizedKnownApi(String loweredHost) {
+    return loweredHost.contains('awign.com') ||
+        loweredHost.contains('gauntlet.xyz') ||
+        loweredHost.contains('search-careers.gm.com') ||
+        loweredHost.contains('bain.com') ||
+        loweredHost.contains('darwinbox.in') ||
+        loweredHost.contains('capitalonecareers.com') ||
+        loweredHost.contains('capgemini.com') ||
+        loweredHost.contains('myworkdaysite.com') ||
+        loweredHost.contains('myworkdayjobs.com') ||
+        loweredHost.contains('careers.breadfinancial.com') ||
+        loweredHost.contains('bitso.com') ||
+        loweredHost.contains('careers.blackline.com') ||
+        loweredHost.contains('jobs.blockchaincapital.com') ||
+        loweredHost.contains('block.xyz') ||
+        loweredHost.contains('blockchain.com') ||
+        loweredHost.contains('avature.net') ||
+        loweredHost.contains('jobs.ea.com') ||
+        loweredHost.contains('binance.com') ||
+        loweredHost.contains('bitcoinsuisse.com') ||
+        loweredHost.contains('greenhouse.io') ||
+        loweredHost.contains('careers.bcg.com') ||
+        loweredHost.contains('careers.bankofamerica.com') ||
+        loweredHost.contains('layerzero.network') ||
+        loweredHost.contains('oraclecloud.com') ||
+        loweredHost.contains('eightfold.ai') ||
+        loweredHost.contains('kraftheinz.com') ||
+        loweredHost.contains('kellanova.com') ||
+        loweredHost.contains('successfactors.com') ||
+        loweredHost.contains('recsolu.com') ||
+        loweredHost.contains('khatabook.com') ||
+        loweredHost.contains('workforcenow.adp.com') ||
+        loweredHost.contains('acko.com') ||
+        loweredHost.contains('cashfree.com') ||
+        loweredHost.contains('chaoslabs.xyz') ||
+        loweredHost.contains('artivatic.ai') ||
+        loweredHost.contains('att.jobs') ||
+        loweredHost.contains('careers.astrazeneca.com') ||
+        loweredHost.contains('careers.blackrock.com') ||
+        loweredHost.contains('careers.coupa.com') ||
+        loweredHost.contains('careers.cred.club') ||
+        loweredHost.contains('copper.co') ||
+        loweredHost.contains('cybrilla.com') ||
+        loweredHost.contains('dapperlabs.com') ||
+        loweredHost.contains('notion.site') ||
+        loweredHost.contains('instahyre.com') ||
+        loweredHost.contains('careers.kula.ai') ||
+        loweredHost.contains('jobs.apple.com') ||
+        loweredHost.contains('jobs.lever.co') ||
+        loweredHost.contains('jobs.ashbyhq.com') ||
+        loweredHost.contains('chainlinklabs.com') ||
+        loweredHost.contains('careers.ford.com') ||
+        loweredHost.contains('jobs.fidelity.com') ||
+        loweredHost.contains('finbox.in') ||
+        loweredHost.contains('careers.hcltech.com') ||
+        loweredHost.contains('hashgraph.com') ||
+        loweredHost.contains('hyperverge.co') ||
+        loweredHost.contains('apply.hp.com') ||
+        loweredHost.contains('careers.hp.com') ||
+        loweredHost.contains('jobs.reczee.com') ||
+        loweredHost.contains('finhaat.com') ||
+        loweredHost.contains('metacareers.com') ||
+        loweredHost.contains('etoro.com') ||
+        loweredHost.contains('www.exodus.com') ||
+        loweredHost.contains('careers.fabric.vc') ||
+        loweredHost.contains('eyglobal.yello.co') ||
+        loweredHost.contains('yello.co') ||
+        loweredHost.contains('careers.etsy.com') ||
+        loweredHost.contains('jobs.aon.com') ||
+        loweredHost.contains('jobs.thecignagroup.com') ||
+        loweredHost.contains('jobs.electriccapital.com') ||
+        loweredHost.contains('consensys.io') ||
+        loweredHost.contains('careers.circle.com') ||
+        loweredHost.contains('careers.cisco.com') ||
+        loweredHost.contains('careers.cognizant.com') ||
+        loweredHost.contains('jobs.gsk.com') ||
+        loweredHost.contains('careers.lilly.com') ||
+        loweredHost.contains('southasiacareers.deloitte.com') ||
+        loweredHost.contains('jobs.disneycareers.com') ||
+        loweredHost.contains('jobs.ebayinc.com') ||
+        loweredHost.contains('eigenlabs.org') ||
+        loweredHost.contains('zohorecruit.in') ||
+        loweredHost.contains('careers.dxc.com') ||
+        loweredHost.contains('jobs.comcast.com') ||
+        loweredHost.contains('jobs.citi.com') ||
+        loweredHost.contains('careers.coca-colacompany.com') ||
+        loweredHost.contains('dydx.exchange') ||
+        loweredHost.contains('coinbase.com') ||
+        loweredHost.contains('cwan.com') ||
+        loweredHost.contains('0x.org') ||
+        loweredHost.contains('www.google.com') ||
+        loweredHost.contains('amazon.jobs') ||
+        loweredHost.contains('accenture.com') ||
+        loweredHost.contains('careers.amd.com') ||
+        loweredHost.contains('careers.amgen.com');
   }
 
   Future<String?> _fetch(Uri uri) async {
@@ -7925,7 +7931,7 @@ class ScraperService {
         final rows = <ScanResultRow>[];
         final seen = <String>{};
         final matchTerms = keywords;
-        final queryTerms = keywords;
+        final queryTerms = keywords.isEmpty ? [''] : keywords;
 
         final latitude =
             (careerUri.queryParameters['glat'] ??
@@ -7945,7 +7951,7 @@ class ScraperService {
 
         for (final query in queryTerms) {
           var totalPages = 1;
-          var recordsPerPage = 15;
+          var recordsPerPage = 100;
 
           for (var page = 1; page <= totalPages && page <= 120; page++) {
             final uri =
@@ -8030,15 +8036,18 @@ class ScraperService {
               final description = (entry['description'] ?? '').trim();
               final titleLower = title.toLowerCase();
               final descLower = description.toLowerCase();
-              final exactWordMatch = matchTerms.any((kw) {
-                final pattern = RegExp(
-                  '\\b${RegExp.escape(kw.toLowerCase())}\\b',
-                );
-                return pattern.hasMatch(titleLower) ||
-                    pattern.hasMatch(descLower);
-              });
-              if (!exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
-                continue;
+
+              if (keywords.isNotEmpty) {
+                final exactWordMatch = matchTerms.any((kw) {
+                  final pattern = RegExp(
+                    '\\b${RegExp.escape(kw.toLowerCase())}\\b',
+                  );
+                  return pattern.hasMatch(titleLower) ||
+                      pattern.hasMatch(descLower);
+                });
+                if (!exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
+                  continue;
+                }
               }
 
               final applyLink = (entry['applyLink'] ?? careerUri.toString())
@@ -8066,7 +8075,7 @@ class ScraperService {
             }
           }
 
-          if (rows.length >= 500) {
+          if (rows.length >= 800) {
             break;
           }
         }
@@ -8081,7 +8090,7 @@ class ScraperService {
       try {
         final rows = <ScanResultRow>[];
         final seen = <String>{};
-        final matchTerms = keywords;
+        final matchTerms = keywords.isEmpty ? [''] : keywords;
         final searchPath = careerUri.path.toLowerCase().contains('/search-jobs')
             ? careerUri.path
             : '/search-jobs';
@@ -8127,23 +8136,41 @@ class ScraperService {
             continue;
           }
 
-          final pageSize = int.tryParse(
-            RegExp(
-                  r'(\d+)\s+of\s+\d+\s+results\s+are\s+now\s+available',
-                  caseSensitive: false,
-                ).firstMatch(firstResp.body)?.group(1) ??
-                '',
-          );
-          final totalResults = int.tryParse(
-            RegExp(
-                  r'([0-9,]+)\s+Results\s+Found',
-                  caseSensitive: false,
-                ).firstMatch(firstResp.body)?.group(1)?.replaceAll(',', '') ??
-                '',
-          );
+          final firstDoc = html_parser.parse(firstResp.body);
+          final searchResultsEl = firstDoc.querySelector('#search-results');
 
-          var discoveredMaxPage = startPage;
-          if (pageSize != null && pageSize > 0 && totalResults != null) {
+          final pageSize =
+              int.tryParse(
+                searchResultsEl?.attributes['data-records-per-page'] ?? '',
+              ) ??
+              int.tryParse(
+                RegExp(
+                      r'(\d+)\s+of\s+\d+\s+results\s+are\s+now\s+available',
+                      caseSensitive: false,
+                    ).firstMatch(firstResp.body)?.group(1) ??
+                    '',
+              );
+          final totalResults =
+              int.tryParse(
+                searchResultsEl?.attributes['data-total-results'] ?? '',
+              ) ??
+              int.tryParse(
+                RegExp(r'([0-9,]+)\s+Results\s+Found', caseSensitive: false)
+                        .firstMatch(firstResp.body)
+                        ?.group(1)
+                        ?.replaceAll(',', '') ??
+                    '',
+              );
+
+          var discoveredMaxPage =
+              int.tryParse(
+                searchResultsEl?.attributes['data-total-pages'] ?? '',
+              ) ??
+              startPage;
+          if (discoveredMaxPage == startPage &&
+              pageSize != null &&
+              pageSize > 0 &&
+              totalResults != null) {
             discoveredMaxPage = ((totalResults - 1) ~/ pageSize) + 1;
           }
           final cappedMaxPage = discoveredMaxPage > 300
@@ -8213,15 +8240,17 @@ class ScraperService {
 
               final titleLower = title.toLowerCase();
               final textLower = cardText.toLowerCase();
-              final exactWordMatch = matchTerms.any((kw) {
-                final pattern = RegExp(
-                  '\\b${RegExp.escape(kw.toLowerCase())}\\b',
-                );
-                return pattern.hasMatch(titleLower) ||
-                    pattern.hasMatch(textLower);
-              });
-              if (!exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
-                continue;
+              if (keywords.isNotEmpty) {
+                final exactWordMatch = keywords.any((kw) {
+                  final pattern = RegExp(
+                    '\\b${RegExp.escape(kw.toLowerCase())}\\b',
+                  );
+                  return pattern.hasMatch(titleLower) ||
+                      pattern.hasMatch(textLower);
+                });
+                if (!exactWordMatch && !fuzzyMatch(titleLower, keywords)) {
+                  continue;
+                }
               }
 
               final applyLink = resolved.toString();
@@ -8267,7 +8296,7 @@ class ScraperService {
       try {
         final rows = <ScanResultRow>[];
         final seen = <String>{};
-        final matchTerms = keywords;
+        final matchTerms = keywords.isEmpty ? [''] : keywords;
         final searchPath = careerUri.path.toLowerCase().contains('/jobs')
             ? careerUri.path
             : '/india-en/jobs';
@@ -8276,94 +8305,114 @@ class ScraperService {
           required String term,
           required Map<String, String> querySeed,
         }) async {
-          try {
-            final fallbackQuery = Map<String, String>.from(querySeed)
-              ..remove('page')
-              ..['page'] = '1';
-            if ((fallbackQuery['keyword'] ?? '').trim().isEmpty) {
-              fallbackQuery['keyword'] = term;
-            }
+          int totalAdded = 0;
+          int page = 1;
+          int consecutiveEmptyPages = 0;
 
-            final sourceUri = Uri.https(
-              careerUri.host,
-              searchPath,
-              fallbackQuery.isEmpty ? null : fallbackQuery,
-            );
-
-            final sourceUrl = sourceUri.toString();
-            final passthroughUrl = sourceUrl.startsWith('https://')
-                ? 'http://${sourceUrl.substring(8)}'
-                : sourceUrl;
-            final jinaUri = Uri.parse('https://r.jina.ai/$passthroughUrl');
-
-            final response = await _client
-                .get(
-                  jinaUri,
-                  headers: {
-                    'accept': 'text/plain, text/markdown, */*',
-                    'user-agent':
-                        userAgents[DateTime.now().millisecond %
-                            userAgents.length],
-                    'referer': careerUri.toString(),
-                  },
-                )
-                .timeout(const Duration(seconds: 20));
-
-            if (response.statusCode >= 400 || response.body.trim().isEmpty) {
-              return 0;
-            }
-
-            String normalize(String input) {
-              return input.replaceAll(RegExp(r'\s+'), ' ').trim();
-            }
-
-            final markdown = response.body;
-            final entries = RegExp(
-              r'##\s+\[([^\]]+)\]\((https?://[^)]+/india-en/jobs/[^)]+)\)',
-              caseSensitive: false,
-            ).allMatches(markdown);
-
-            var added = 0;
-            for (final entry in entries) {
-              final title = normalize(entry.group(1) ?? '');
-              final applyLink = normalize(entry.group(2) ?? '');
-              if (title.isEmpty || applyLink.isEmpty) continue;
-
-              final titleLower = title.toLowerCase();
-              final exactWordMatch = matchTerms.any((kw) {
-                final pattern = RegExp(
-                  '\\b${RegExp.escape(kw.toLowerCase())}\\b',
-                );
-                return pattern.hasMatch(titleLower);
-              });
-              if (!exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
-                continue;
+          while (page <= 85) {
+            try {
+              final fallbackQuery = Map<String, String>.from(querySeed)
+                ..remove('page')
+                ..['page'] = '$page';
+              if ((fallbackQuery['keyword'] ?? '').trim().isEmpty) {
+                fallbackQuery['keyword'] = term;
               }
 
-              final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
-              if (seen.contains(key)) continue;
-              seen.add(key);
-
-              rows.add(
-                ScanResultRow(
-                  company: companyName,
-                  title: title,
-                  companyUrl: sourceUri.toString(),
-                  applyLink: applyLink,
-                  location: 'Not specified',
-                  duration: 'Unknown',
-                  deadline: '—',
-                  source: 'Cognizant Careers Jina Fallback',
-                  error: '',
-                ),
+              final sourceUri = Uri.https(
+                careerUri.host,
+                searchPath,
+                fallbackQuery.isEmpty ? null : fallbackQuery,
               );
-              added++;
-            }
 
-            return added;
-          } catch (_) {
-            return 0;
+              final sourceUrl = sourceUri.toString();
+              final passthroughUrl = sourceUrl.startsWith('https://')
+                  ? 'http://${sourceUrl.substring(8)}'
+                  : sourceUrl;
+              final jinaUri = Uri.parse('https://r.jina.ai/$passthroughUrl');
+
+              final response = await _client
+                  .get(
+                    jinaUri,
+                    headers: {
+                      'accept': 'text/plain, text/markdown, */*',
+                      'user-agent':
+                          userAgents[DateTime.now().millisecond %
+                              userAgents.length],
+                      'referer': careerUri.toString(),
+                    },
+                  )
+                  .timeout(const Duration(seconds: 20));
+
+              if (response.statusCode >= 400 || response.body.trim().isEmpty) {
+                break;
+              }
+
+              String normalize(String input) {
+                return input.replaceAll(RegExp(r'\s+'), ' ').trim();
+              }
+
+              final markdown = response.body;
+              final entries = RegExp(
+                r'##\s+\[([^\]]+)\]\((https?://[^)]+/india-en/jobs/[^)]+)\)',
+                caseSensitive: false,
+              ).allMatches(markdown);
+
+              if (entries.isEmpty) {
+                consecutiveEmptyPages++;
+                if (consecutiveEmptyPages >= 2) {
+                  break;
+                }
+              } else {
+                consecutiveEmptyPages = 0;
+              }
+
+              var added = 0;
+              for (final entry in entries) {
+                final title = normalize(entry.group(1) ?? '');
+                final applyLink = normalize(entry.group(2) ?? '');
+                if (title.isEmpty || applyLink.isEmpty) continue;
+
+                final titleLower = title.toLowerCase();
+                if (keywords.isNotEmpty) {
+                  final exactWordMatch = keywords.any((kw) {
+                    final pattern = RegExp(
+                      '\\b${RegExp.escape(kw.toLowerCase())}\\b',
+                    );
+                    return pattern.hasMatch(titleLower);
+                  });
+                  if (!exactWordMatch && !fuzzyMatch(titleLower, keywords)) {
+                    continue;
+                  }
+                }
+
+                final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
+                if (seen.contains(key)) continue;
+                seen.add(key);
+
+                rows.add(
+                  ScanResultRow(
+                    company: companyName,
+                    title: title,
+                    companyUrl: sourceUri.toString(),
+                    applyLink: applyLink,
+                    location: 'Not specified',
+                    duration: 'Unknown',
+                    deadline: '—',
+                    source: 'Cognizant Careers Jina Fallback',
+                    error: '',
+                  ),
+                );
+                added++;
+              }
+
+              totalAdded += added;
+              page++;
+            } catch (_) {
+              break;
+            }
           }
+
+          return totalAdded;
         }
 
         String normalize(String input) {
@@ -8502,15 +8551,17 @@ class ScraperService {
 
               final titleLower = title.toLowerCase();
               final textLower = cardText.toLowerCase();
-              final exactWordMatch = matchTerms.any((kw) {
-                final pattern = RegExp(
-                  '\\b${RegExp.escape(kw.toLowerCase())}\\b',
-                );
-                return pattern.hasMatch(titleLower) ||
-                    pattern.hasMatch(textLower);
-              });
-              if (!exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
-                continue;
+              if (keywords.isNotEmpty) {
+                final exactWordMatch = keywords.any((kw) {
+                  final pattern = RegExp(
+                    '\\b${RegExp.escape(kw.toLowerCase())}\\b',
+                  );
+                  return pattern.hasMatch(titleLower) ||
+                      pattern.hasMatch(textLower);
+                });
+                if (!exactWordMatch && !fuzzyMatch(titleLower, keywords)) {
+                  continue;
+                }
               }
 
               final applyLink = resolved.toString();
@@ -9134,7 +9185,7 @@ class ScraperService {
       try {
         final rows = <ScanResultRow>[];
         final seen = <String>{};
-        final queryTerms = keywords;
+        final queryTerms = keywords.isEmpty ? [''] : keywords;
         const pageSize = 50;
 
         Future<void> collectFromQuery(Map<String, String> baseParams) async {
@@ -9459,78 +9510,68 @@ class ScraperService {
         final rows = <ScanResultRow>[];
         final seen = <String>{};
         final matchTerms = keywords;
-        final queryTerms = keywords;
+        final queryTerms = keywords.isEmpty ? [''] : keywords;
         final filters = (careerUri.queryParameters['filters'] ?? '').trim();
-        const take = 20;
+        const pageSize = 800; // Large pageSize to get all jobs in one go
 
         for (final query in queryTerms) {
-          var totalPages = 1;
+          final qp = <String, String>{
+            'start': '0',
+            'results': '$pageSize',
+            'searchValue': query,
+            'filters': filters,
+          };
 
-          for (var page = 1; page <= totalPages && page <= 60; page++) {
-            final qp = <String, String>{
-              'keyword': query,
-              'page': '$page',
-              'take': '$take',
-            };
-            if (filters.isNotEmpty) {
-              qp['filters'] = filters;
-            }
+          final uri = Uri.https(
+            'www.bain.com',
+            '/en/api/jobsearch/keyword/get',
+            qp,
+          );
 
-            final uri = Uri.https(
-              'www.bain.com',
-              '/en/api/jobsearch/keyword/get',
-              qp,
-            );
+          final response = await _client
+              .get(
+                uri,
+                headers: {
+                  'user-agent':
+                      userAgents[DateTime.now().millisecond %
+                          userAgents.length],
+                  'accept': 'application/json, text/plain, */*',
+                  'x-requested-with': 'XMLHttpRequest',
+                  'referer': careerUri.toString(),
+                },
+              )
+              .timeout(const Duration(seconds: 15));
 
-            final response = await _client
-                .get(
-                  uri,
-                  headers: {
-                    'user-agent':
-                        userAgents[DateTime.now().millisecond %
-                            userAgents.length],
-                    'accept': 'application/json, text/plain, */*',
-                    'x-requested-with': 'XMLHttpRequest',
-                    'referer': careerUri.toString(),
-                  },
-                )
-                .timeout(const Duration(seconds: 12));
+          if (response.statusCode >= 400 || response.body.trim().isEmpty) {
+            continue;
+          }
 
-            if (response.statusCode >= 400 || response.body.trim().isEmpty) {
-              continue;
-            }
+          final decoded = jsonDecode(response.body);
+          if (decoded is! Map) {
+            continue;
+          }
 
-            final decoded = jsonDecode(response.body);
-            if (decoded is! Map) {
-              continue;
-            }
+          final results = decoded['results'];
+          if (results is! List || results.isEmpty) {
+            continue;
+          }
 
-            final totalResults = int.tryParse(
-              (decoded['totalResults'] ?? '').toString(),
-            );
-            if (totalResults != null && totalResults > 0) {
-              totalPages = ((totalResults + take - 1) ~/ take);
-            }
+          for (final item in results.whereType<Map>()) {
+            final map = item.map((k, v) => MapEntry(k.toString(), v));
+            final title = (map['JobTitle'] ?? '').toString().trim();
+            if (title.isEmpty) continue;
 
-            final results = decoded['results'];
-            if (results is! List || results.isEmpty) {
-              continue;
-            }
+            final descriptionHtml = (map['JobDescription'] ?? '')
+                .toString()
+                .trim();
+            final descriptionDoc = html_parser.parse(descriptionHtml);
+            final description =
+                descriptionDoc.documentElement?.text.trim() ?? '';
 
-            for (final item in results.whereType<Map>()) {
-              final map = item.map((k, v) => MapEntry(k.toString(), v));
-              final title = (map['JobTitle'] ?? '').toString().trim();
-              if (title.isEmpty) continue;
+            final titleLower = title.toLowerCase();
+            final descLower = description.toLowerCase();
 
-              final descriptionHtml = (map['JobDescription'] ?? '')
-                  .toString()
-                  .trim();
-              final descriptionDoc = html_parser.parse(descriptionHtml);
-              final description =
-                  descriptionDoc.documentElement?.text.trim() ?? '';
-
-              final titleLower = title.toLowerCase();
-              final descLower = description.toLowerCase();
+            if (keywords.isNotEmpty) {
               final exactWordMatch = matchTerms.any((kw) {
                 final pattern = RegExp(
                   '\\b${RegExp.escape(kw.toLowerCase())}\\b',
@@ -9541,53 +9582,49 @@ class ScraperService {
               if (!exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
                 continue;
               }
-
-              final rawLink = (map['Link'] ?? '').toString().trim();
-              final applyLink = rawLink.isEmpty
-                  ? careerUri.toString()
-                  : careerUri.resolve(rawLink).toString();
-              final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
-              if (seen.contains(key)) continue;
-              seen.add(key);
-
-              final locationValue = map['Location'];
-              String location = 'Not specified';
-              if (locationValue is List) {
-                final normalized = locationValue
-                    .map((e) => e.toString().trim())
-                    .where((e) => e.isNotEmpty)
-                    .toSet()
-                    .toList();
-                if (normalized.isNotEmpty) {
-                  location = normalized.take(3).join(', ');
-                }
-              } else {
-                final text = locationValue?.toString().trim() ?? '';
-                if (text.isNotEmpty) {
-                  location = text;
-                }
-              }
-
-              final durationData = parseDuration(description);
-
-              rows.add(
-                ScanResultRow(
-                  company: companyName,
-                  title: title,
-                  companyUrl: careerUri.toString(),
-                  applyLink: applyLink,
-                  location: location,
-                  duration: durationData.$1,
-                  deadline: '—',
-                  source: 'Bain Job Search API',
-                  error: '',
-                ),
-              );
             }
-          }
 
-          if (rows.length >= 300) {
-            break;
+            final rawLink = (map['Link'] ?? '').toString().trim();
+            final applyLink = rawLink.isEmpty
+                ? careerUri.toString()
+                : careerUri.resolve(rawLink).toString();
+            final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
+            if (seen.contains(key)) continue;
+            seen.add(key);
+
+            final locationValue = map['Location'];
+            String location = 'Not specified';
+            if (locationValue is List) {
+              final normalized = locationValue
+                  .map((e) => e.toString().trim())
+                  .where((e) => e.isNotEmpty)
+                  .toSet()
+                  .toList();
+              if (normalized.isNotEmpty) {
+                location = normalized.take(3).join(', ');
+              }
+            } else {
+              final text = locationValue?.toString().trim() ?? '';
+              if (text.isNotEmpty) {
+                location = text;
+              }
+            }
+
+            final durationData = parseDuration(description);
+
+            rows.add(
+              ScanResultRow(
+                company: companyName,
+                title: title,
+                companyUrl: careerUri.toString(),
+                applyLink: applyLink,
+                location: location,
+                duration: durationData.$1,
+                deadline: '—',
+                source: 'Bain Job Search API',
+                error: '',
+              ),
+            );
           }
         }
 
@@ -9602,12 +9639,13 @@ class ScraperService {
         final rows = <ScanResultRow>[];
         final seen = <String>{};
         final matchTerms = keywords;
-        final queryTerms = keywords;
+        final queryTerms = keywords.isEmpty ? [''] : keywords;
 
         for (final query in queryTerms) {
           var totalPages = 162;
+          var recordsPerPage = 100;
 
-          for (var page = 1; page <= totalPages; page++) {
+          for (var page = 1; page <= totalPages && page <= 60; page++) {
             try {
               final uri = Uri.https('www.att.jobs', '/search-jobs/results', {
                 'Keywords': query,
@@ -9617,7 +9655,7 @@ class ScraperService {
                 'Longitude': '',
                 'ShowRadius': 'False',
                 'CurrentPage': '$page',
-                'RecordsPerPage': '12',
+                'RecordsPerPage': '$recordsPerPage',
                 'ActiveFacetID': '0',
                 'CustomFacetName': '',
                 'FacetTerm': '',
@@ -9671,6 +9709,14 @@ class ScraperService {
                 totalPages = parsedTotalPages;
               }
 
+              final recordsPerPageAttr = section
+                  ?.attributes['data-records-per-page']
+                  ?.trim();
+              final parsedRecordsPerPage = int.tryParse(recordsPerPageAttr ?? '');
+              if (parsedRecordsPerPage != null && parsedRecordsPerPage > 0) {
+                recordsPerPage = parsedRecordsPerPage;
+              }
+
               final entries = _extractTalentBrewEntries(
                 doc,
                 baseUri: careerUri,
@@ -9686,15 +9732,18 @@ class ScraperService {
                 final description = (entry['description'] ?? '').trim();
                 final titleLower = title.toLowerCase();
                 final descLower = description.toLowerCase();
-                final exactWordMatch = matchTerms.any((kw) {
-                  final pattern = RegExp(
-                    '\\b${RegExp.escape(kw.toLowerCase())}\\b',
-                  );
-                  return pattern.hasMatch(titleLower) ||
-                      pattern.hasMatch(descLower);
-                });
-                if (!exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
-                  continue;
+
+                if (keywords.isNotEmpty) {
+                  final exactWordMatch = matchTerms.any((kw) {
+                    final pattern = RegExp(
+                      '\\b${RegExp.escape(kw.toLowerCase())}\\b',
+                    );
+                    return pattern.hasMatch(titleLower) ||
+                        pattern.hasMatch(descLower);
+                  });
+                  if (!exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
+                    continue;
+                  }
                 }
 
                 final durationData = parseDuration(description);
@@ -9726,7 +9775,7 @@ class ScraperService {
             }
           }
 
-          if (rows.length >= 300) {
+          if (rows.length >= 800) {
             break;
           }
         }
@@ -9742,12 +9791,13 @@ class ScraperService {
         final rows = <ScanResultRow>[];
         final seen = <String>{};
         final matchTerms = keywords;
-        final queryTerms = keywords;
+        final queryTerms = keywords.isEmpty ? [''] : keywords;
 
         for (final query in queryTerms) {
           var totalPages = 75;
+          var recordsPerPage = 100;
 
-          for (var page = 1; page <= totalPages; page++) {
+          for (var page = 1; page <= totalPages && page <= 60; page++) {
             final uri =
                 Uri.https('careers.astrazeneca.com', '/search-jobs/results', {
                   'Keywords': query,
@@ -9757,7 +9807,7 @@ class ScraperService {
                   'Longitude': '',
                   'ShowRadius': 'False',
                   'CurrentPage': '$page',
-                  'RecordsPerPage': '15',
+                  'RecordsPerPage': '$recordsPerPage',
                   'ActiveFacetID': '0',
                   'CustomFacetName': '',
                   'FacetTerm': '',
@@ -9810,6 +9860,14 @@ class ScraperService {
               totalPages = parsedTotalPages;
             }
 
+            final recordsPerPageAttr = section
+                ?.attributes['data-records-per-page']
+                ?.trim();
+            final parsedRecordsPerPage = int.tryParse(recordsPerPageAttr ?? '');
+            if (parsedRecordsPerPage != null && parsedRecordsPerPage > 0) {
+              recordsPerPage = parsedRecordsPerPage;
+            }
+
             final entries = _extractTalentBrewEntries(doc, baseUri: careerUri);
             if (entries.isEmpty) {
               continue;
@@ -9822,15 +9880,18 @@ class ScraperService {
               final description = (entry['description'] ?? '').trim();
               final titleLower = title.toLowerCase();
               final descLower = description.toLowerCase();
-              final exactWordMatch = matchTerms.any((kw) {
-                final pattern = RegExp(
-                  '\\b${RegExp.escape(kw.toLowerCase())}\\b',
-                );
-                return pattern.hasMatch(titleLower) ||
-                    pattern.hasMatch(descLower);
-              });
-              if (!exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
-                continue;
+
+              if (keywords.isNotEmpty) {
+                final exactWordMatch = matchTerms.any((kw) {
+                  final pattern = RegExp(
+                    '\\b${RegExp.escape(kw.toLowerCase())}\\b',
+                  );
+                  return pattern.hasMatch(titleLower) ||
+                      pattern.hasMatch(descLower);
+                });
+                if (!exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
+                  continue;
+                }
               }
 
               final durationData = parseDuration(description);
@@ -9859,7 +9920,7 @@ class ScraperService {
             }
           }
 
-          if (rows.length >= 300) {
+          if (rows.length >= 800) {
             break;
           }
         }
@@ -9876,7 +9937,7 @@ class ScraperService {
         final rows = <ScanResultRow>[];
         final seen = <String>{};
         final matchTerms = keywords;
-        final queryTerms = keywords;
+        final queryTerms = keywords.isEmpty ? [''] : keywords;
 
         for (final query in queryTerms) {
           var totalPages = 1;
@@ -9891,7 +9952,7 @@ class ScraperService {
                   'Longitude': '',
                   'ShowRadius': 'False',
                   'CurrentPage': '$page',
-                  'RecordsPerPage': '10',
+                  'RecordsPerPage': '100',
                   'ActiveFacetID': '0',
                   'CustomFacetName': '',
                   'FacetTerm': '',
@@ -9956,15 +10017,18 @@ class ScraperService {
               final description = (entry['description'] ?? '').trim();
               final titleLower = title.toLowerCase();
               final descLower = description.toLowerCase();
-              final exactWordMatch = matchTerms.any((kw) {
-                final pattern = RegExp(
-                  '\\b${RegExp.escape(kw.toLowerCase())}\\b',
-                );
-                return pattern.hasMatch(titleLower) ||
-                    pattern.hasMatch(descLower);
-              });
-              if (!exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
-                continue;
+
+              if (keywords.isNotEmpty) {
+                final exactWordMatch = matchTerms.any((kw) {
+                  final pattern = RegExp(
+                    '\\b${RegExp.escape(kw.toLowerCase())}\\b',
+                  );
+                  return pattern.hasMatch(titleLower) ||
+                      pattern.hasMatch(descLower);
+                });
+                if (!exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
+                  continue;
+                }
               }
 
               final applyLink = (entry['applyLink'] ?? careerUri.toString())
@@ -9992,7 +10056,7 @@ class ScraperService {
             }
           }
 
-          if (rows.length >= 300) {
+          if (rows.length >= 800) {
             break;
           }
         }
@@ -10218,112 +10282,135 @@ class ScraperService {
       try {
         final rows = <ScanResultRow>[];
         final seen = <String>{};
-        final queryTerms = keywords;
+        final matchTerms = keywords;
+        final queryTerms = keywords.isEmpty ? [''] : keywords;
         final locationFilter = (careerUri.queryParameters['location'] ?? '')
             .toString()
             .trim();
         final sortBy = (careerUri.queryParameters['sortBy'] ?? 'relevance')
             .toString();
-        final page =
-            int.tryParse(careerUri.queryParameters['page'] ?? '1') ?? 1;
-        final requestedLimit =
-            int.tryParse(careerUri.queryParameters['limit'] ?? '100') ?? 100;
-        final limit = requestedLimit.clamp(1, 100);
         final regionCode = (careerUri.queryParameters['regionCode'] ?? '')
             .toString()
             .trim();
+        const pageSize = 100;
 
         for (final query in queryTerms) {
-          final qp = <String, String>{
-            'keywords': query,
-            'sortBy': sortBy,
-            'page': '$page',
-            'limit': '$limit',
-          };
-          if (locationFilter.isNotEmpty) {
-            qp['location'] = locationFilter;
-          }
-          if (regionCode.isNotEmpty) {
-            qp['regionCode'] = regionCode;
-          }
+          var currentPage = 1;
+          var totalPages = 1;
 
-          final uri = Uri.https('jobs.aon.com', '/api/jobs', qp);
-          final response = await _client
-              .get(
-                uri,
-                headers: const {'accept': 'application/json, text/plain, */*'},
-              )
-              .timeout(const Duration(seconds: 12));
-
-          if (response.statusCode >= 400 || response.body.trim().isEmpty) {
-            continue;
-          }
-
-          final decoded = jsonDecode(response.body);
-          if (decoded is! Map || decoded['jobs'] is! List) {
-            continue;
-          }
-
-          final jobs = (decoded['jobs'] as List).whereType<Map>();
-          for (final item in jobs) {
-            final data = item['data'];
-            if (data is! Map) continue;
-            final map = data.map((k, v) => MapEntry(k.toString(), v));
-
-            final title = (map['title'] ?? '').toString().trim();
-            final description = (map['description'] ?? '').toString().trim();
-            if (title.isEmpty) continue;
-
-            final titleLower = title.toLowerCase();
-            final descLower = description.toLowerCase();
-            final exactWordMatch = keywords.any((kw) {
-              final pattern = RegExp(
-                '\\b${RegExp.escape(kw.toLowerCase())}\\b',
-              );
-              return pattern.hasMatch(titleLower) ||
-                  pattern.hasMatch(descLower);
-            });
-            if (!exactWordMatch && !fuzzyMatch(titleLower, keywords)) continue;
-
-            final durationData = parseDuration(description);
-
-            final applyLink =
-                (map['apply_url'] ?? map['url'] ?? careerUri.toString())
-                    .toString()
-                    .trim();
-            final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
-            if (seen.contains(key)) continue;
-            seen.add(key);
-
-            String location = (map['location_name'] ?? '').toString().trim();
-            final locations = map['locations'];
-            if (locations is List && locations.isNotEmpty) {
-              final names = locations
-                  .whereType<Map>()
-                  .map((e) => (e['name'] ?? '').toString().trim())
-                  .where((v) => v.isNotEmpty)
-                  .toList();
-              if (names.isNotEmpty) {
-                location = names.join(', ');
-              }
+          while (currentPage <= totalPages && rows.length < 800) {
+            final qp = <String, String>{
+              'keywords': query,
+              'sortBy': sortBy,
+              'page': '$currentPage',
+              'limit': '$pageSize',
+            };
+            if (locationFilter.isNotEmpty) {
+              qp['location'] = locationFilter;
+            }
+            if (regionCode.isNotEmpty) {
+              qp['regionCode'] = regionCode;
             }
 
-            rows.add(
-              ScanResultRow(
-                company: companyName,
-                title: title,
-                companyUrl: careerUri.toString(),
-                applyLink: applyLink.isEmpty ? careerUri.toString() : applyLink,
-                location: location.isEmpty ? 'Not specified' : location,
-                duration: durationData.$1,
-                deadline: '—',
-                source: 'Aon Jobs API',
-                error: '',
-              ),
+            final uri = Uri.https('jobs.aon.com', '/api/jobs', qp);
+            final response = await _client
+                .get(
+                  uri,
+                  headers: const {
+                    'accept': 'application/json, text/plain, */*',
+                    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                  },
+                )
+                .timeout(const Duration(seconds: 12));
+
+            if (response.statusCode >= 400 || response.body.trim().isEmpty) {
+              break;
+            }
+
+            final decoded = jsonDecode(response.body);
+            if (decoded is! Map || decoded['jobs'] is! List) {
+              break;
+            }
+
+            final totalCount = int.tryParse(
+              (decoded['totalCount'] ?? '').toString(),
             );
+            if (totalCount != null && totalCount > 0) {
+              totalPages = (totalCount + pageSize - 1) ~/ pageSize;
+            }
+
+            final jobs = (decoded['jobs'] as List).whereType<Map>();
+            if (jobs.isEmpty) {
+              break;
+            }
+
+            for (final item in jobs) {
+              final data = item['data'];
+              if (data is! Map) continue;
+              final map = data.map((k, v) => MapEntry(k.toString(), v));
+
+              final title = (map['title'] ?? '').toString().trim();
+              final description = (map['description'] ?? '').toString().trim();
+              if (title.isEmpty) continue;
+
+              final titleLower = title.toLowerCase();
+              final descLower = description.toLowerCase();
+
+              if (keywords.isNotEmpty) {
+                final exactWordMatch = matchTerms.any((kw) {
+                  final pattern = RegExp(
+                    '\\b${RegExp.escape(kw.toLowerCase())}\\b',
+                  );
+                  return pattern.hasMatch(titleLower) ||
+                      pattern.hasMatch(descLower);
+                });
+                if (!exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
+                  continue;
+                }
+              }
+
+              final durationData = parseDuration(description);
+
+              final applyLink =
+                  (map['apply_url'] ?? map['url'] ?? careerUri.toString())
+                      .toString()
+                      .trim();
+              final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
+              if (seen.contains(key)) continue;
+              seen.add(key);
+
+              String location = (map['location_name'] ?? '').toString().trim();
+              final locations = map['locations'];
+              if (locations is List && locations.isNotEmpty) {
+                final names = locations
+                    .whereType<Map>()
+                    .map((e) => (e['name'] ?? '').toString().trim())
+                    .where((v) => v.isNotEmpty)
+                    .toList();
+                if (names.isNotEmpty) {
+                  location = names.join(', ');
+                }
+              }
+
+              rows.add(
+                ScanResultRow(
+                  company: companyName,
+                  title: title,
+                  companyUrl: careerUri.toString(),
+                  applyLink: applyLink.isEmpty ? careerUri.toString() : applyLink,
+                  location: location.isEmpty ? 'Not specified' : location,
+                  duration: durationData.$1,
+                  deadline: '—',
+                  source: 'Aon Jobs API',
+                  error: '',
+                ),
+              );
+            }
+
+            currentPage++;
           }
 
-          if (rows.length >= 200) {
+          if (rows.length >= 800) {
             break;
           }
         }
@@ -10514,116 +10601,141 @@ class ScraperService {
       try {
         final rows = <ScanResultRow>[];
         final seen = <String>{};
-        final queryTerms = keywords;
-        final matchTerms = keywords.isEmpty ? queryTerms : keywords;
+        final matchTerms = keywords;
+        final queryTerms = keywords.isEmpty ? [''] : keywords;
 
         for (final query in queryTerms) {
-          final uri =
-              Uri.https('careers.amgen.com', '/en/search-jobs/results', {
-                'Keywords': query,
-                'Location': '',
-                'Distance': '50',
-                'Latitude': '',
-                'Longitude': '',
-                'ShowRadius': 'False',
-                'CurrentPage': '1',
-                'RecordsPerPage': '100',
-                'ActiveFacetID': '0',
-                'CustomFacetName': '',
-                'FacetTerm': '',
-                'FacetType': '0',
-                'SearchResultsModuleName': 'Search Results v2 - Module',
-                'SortCriteria': '0',
-                'SortDirection': '0',
-                'SearchType': '5',
-                'KeywordType': '',
-                'LocationType': '',
-                'LocationPath': '',
-                'OrganizationIds': '87',
-                'PostalCode': '',
-                'ResultsType': '0',
-                'TotalContentResults': '0',
-                'IsPagination': 'False',
-              });
+          var totalPages = 1;
+          var recordsPerPage = 100;
 
-          final response = await _client
-              .get(
-                uri,
-                headers: const {
-                  'accept': 'application/json, text/javascript, */*; q=0.01',
-                  'x-requested-with': 'XMLHttpRequest',
-                  'referer': 'https://careers.amgen.com/en/search-jobs',
-                },
-              )
-              .timeout(const Duration(seconds: 12));
+          for (var page = 1; page <= totalPages && page <= 60; page++) {
+            final uri =
+                Uri.https('careers.amgen.com', '/en/search-jobs/results', {
+                  'Keywords': query,
+                  'Location': '',
+                  'Distance': '50',
+                  'Latitude': '',
+                  'Longitude': '',
+                  'ShowRadius': 'False',
+                  'CurrentPage': '$page',
+                  'RecordsPerPage': '$recordsPerPage',
+                  'ActiveFacetID': '0',
+                  'CustomFacetName': '',
+                  'FacetTerm': '',
+                  'FacetType': '0',
+                  'SearchResultsModuleName': 'Search Results v2 - Module',
+                  'SortCriteria': '0',
+                  'SortDirection': '0',
+                  'SearchType': '5',
+                  'KeywordType': '',
+                  'LocationType': '',
+                  'LocationPath': '',
+                  'OrganizationIds': '87',
+                  'PostalCode': '',
+                  'ResultsType': '0',
+                  'TotalContentResults': '0',
+                  'IsPagination': 'False',
+                });
 
-          if (response.statusCode >= 400 || response.body.trim().isEmpty) {
-            continue;
-          }
+            final response = await _client
+                .get(
+                  uri,
+                  headers: const {
+                    'accept': 'application/json, text/javascript, */*; q=0.01',
+                    'x-requested-with': 'XMLHttpRequest',
+                    'referer': 'https://careers.amgen.com/en/search-jobs',
+                  },
+                )
+                .timeout(const Duration(seconds: 12));
 
-          final decoded = jsonDecode(response.body);
-          if (decoded is! Map) {
-            continue;
-          }
-
-          final resultsHtml = (decoded['results'] ?? '').toString();
-          if (resultsHtml.trim().isEmpty) {
-            continue;
-          }
-
-          final doc = html_parser.parse(resultsHtml);
-          final cards = doc.querySelectorAll(
-            'ul#search-results-jobs li > a[href]',
-          );
-
-          for (final card in cards) {
-            final title =
-                card.querySelector('h3')?.text.trim() ?? card.text.trim();
-            if (title.isEmpty) continue;
-
-            final description = card.text.trim();
-            final titleLower = title.toLowerCase();
-            final descLower = description.toLowerCase();
-            final exactWordMatch = matchTerms.any((kw) {
-              final pattern = RegExp(
-                '\\b${RegExp.escape(kw.toLowerCase())}\\b',
-              );
-              return pattern.hasMatch(titleLower) ||
-                  pattern.hasMatch(descLower);
-            });
-            if (!exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
+            if (response.statusCode >= 400 || response.body.trim().isEmpty) {
               continue;
             }
 
-            final durationData = parseDuration(description);
+            final decoded = jsonDecode(response.body);
+            if (decoded is! Map) {
+              continue;
+            }
 
-            final href = card.attributes['href'] ?? '';
-            final applyLink = href.isEmpty
-                ? careerUri.toString()
-                : Uri.https('careers.amgen.com', href).toString();
-            final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
-            if (seen.contains(key)) continue;
-            seen.add(key);
+            final resultsHtml = (decoded['results'] ?? '').toString();
+            if (resultsHtml.trim().isEmpty) {
+              continue;
+            }
 
-            final location =
-                card.querySelector('.job-location')?.text.trim() ?? '';
+            final doc = html_parser.parse(resultsHtml);
+            final section = doc.querySelector('section#search-results');
+            final totalPagesAttr = section?.attributes['data-total-pages']
+                ?.trim();
+            final parsedTotalPages = int.tryParse(totalPagesAttr ?? '');
+            if (parsedTotalPages != null && parsedTotalPages > 0) {
+              totalPages = parsedTotalPages;
+            }
 
-            rows.add(
-              ScanResultRow(
-                company: companyName,
-                title: title,
-                companyUrl: careerUri.toString(),
-                applyLink: applyLink,
-                location: location.isEmpty ? 'Not specified' : location,
-                duration: durationData.$1,
-                deadline: '—',
-                source: 'Amgen TalentBrew API',
-                error: '',
-              ),
+            final recordsPerPageAttr = section
+                ?.attributes['data-records-per-page']
+                ?.trim();
+            final parsedRecordsPerPage = int.tryParse(recordsPerPageAttr ?? '');
+            if (parsedRecordsPerPage != null && parsedRecordsPerPage > 0) {
+              recordsPerPage = parsedRecordsPerPage;
+            }
+
+            final cards = doc.querySelectorAll(
+              'ul#search-results-jobs li > a[href]',
             );
+
+            for (final card in cards) {
+              final title =
+                  card.querySelector('h3')?.text.trim() ?? card.text.trim();
+              if (title.isEmpty) continue;
+
+              final description = card.text.trim();
+              final titleLower = title.toLowerCase();
+              final descLower = description.toLowerCase();
+
+              if (keywords.isNotEmpty) {
+                final exactWordMatch = matchTerms.any((kw) {
+                  final pattern = RegExp(
+                    '\\b${RegExp.escape(kw.toLowerCase())}\\b',
+                  );
+                  return pattern.hasMatch(titleLower) ||
+                      pattern.hasMatch(descLower);
+                });
+                if (!exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
+                  continue;
+                }
+              }
+
+              final durationData = parseDuration(description);
+
+              final href = card.attributes['href'] ?? '';
+              final applyLink = href.isEmpty
+                  ? careerUri.toString()
+                  : Uri.https('careers.amgen.com', href).toString();
+
+              final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
+              if (seen.contains(key)) continue;
+              seen.add(key);
+
+              final location =
+                  card.querySelector('.job-location')?.text.trim() ?? '';
+
+              rows.add(
+                ScanResultRow(
+                  company: companyName,
+                  title: title,
+                  companyUrl: careerUri.toString(),
+                  applyLink: applyLink,
+                  location: location.isEmpty ? 'Not specified' : location,
+                  duration: durationData.$1,
+                  deadline: '—',
+                  source: 'Amgen TalentBrew API',
+                  error: '',
+                ),
+              );
+            }
           }
 
-          if (rows.length >= 200) {
+          if (rows.length >= 800) {
             break;
           }
         }
@@ -10762,85 +10874,109 @@ class ScraperService {
           }
         }
 
-        final queryTerms = keywords;
+        final queryTerms = keywords.isEmpty ? [''] : keywords;
         for (final query in queryTerms) {
-          final qp = <String, dynamic>{
-            'base_query': query,
-            'offset': '0',
-            'result_limit': '30',
-          };
-          if (countryFilters.isNotEmpty) {
-            qp['country[]'] = countryFilters;
-          }
+          int offset = 0;
+          const int limit = 100;
+          var consecutiveEmptyPages = 0;
 
-          final uri = Uri.https('www.amazon.jobs', '/en/search.json', qp);
-          final response = await _client
-              .get(
-                uri,
-                headers: const {'accept': 'application/json, text/plain, */*'},
-              )
-              .timeout(const Duration(seconds: 12));
+          while (true) {
+            final qp = <String, dynamic>{
+              'base_query': query,
+              'offset': '$offset',
+              'result_limit': '$limit',
+            };
+            if (countryFilters.isNotEmpty) {
+              qp['country[]'] = countryFilters;
+            }
 
-          if (response.statusCode >= 400 || response.body.trim().isEmpty) {
-            continue;
-          }
+            final uri = Uri.https('www.amazon.jobs', '/en/search.json', qp);
+            final response = await _client
+                .get(
+                  uri,
+                  headers: const {
+                    'accept': 'application/json, text/plain, */*',
+                  },
+                )
+                .timeout(const Duration(seconds: 12));
 
-          final decoded = jsonDecode(response.body);
-          if (decoded is! Map || decoded['jobs'] is! List) {
-            continue;
-          }
+            if (response.statusCode >= 400 || response.body.trim().isEmpty) {
+              break;
+            }
 
-          final jobs = (decoded['jobs'] as List).whereType<Map>();
-          for (final item in jobs) {
-            final map = item.map((k, v) => MapEntry(k.toString(), v));
+            final decoded = jsonDecode(response.body);
+            if (decoded is! Map || decoded['jobs'] is! List) {
+              break;
+            }
 
-            final title = (map['title'] ?? '').toString().trim();
-            final description = (map['description'] ?? '').toString().trim();
-            if (title.isEmpty) continue;
+            final jobs = (decoded['jobs'] as List).whereType<Map>();
+            if (jobs.isEmpty) {
+              consecutiveEmptyPages++;
+              if (consecutiveEmptyPages >= 2) {
+                break;
+              }
+            } else {
+              consecutiveEmptyPages = 0;
+            }
 
-            final titleLower = title.toLowerCase();
-            final descLower = description.toLowerCase();
-            final exactWordMatch = keywords.any((kw) {
-              final pattern = RegExp(
-                '\\b${RegExp.escape(kw.toLowerCase())}\\b',
+            for (final item in jobs) {
+              final map = item.map((k, v) => MapEntry(k.toString(), v));
+
+              final title = (map['title'] ?? '').toString().trim();
+              final description = (map['description'] ?? '').toString().trim();
+              if (title.isEmpty) continue;
+
+              final titleLower = title.toLowerCase();
+              final descLower = description.toLowerCase();
+
+              if (keywords.isNotEmpty) {
+                final exactWordMatch = keywords.any((kw) {
+                  final pattern = RegExp(
+                    '\\b${RegExp.escape(kw.toLowerCase())}\\b',
+                  );
+                  return pattern.hasMatch(titleLower) ||
+                      pattern.hasMatch(descLower);
+                });
+                if (!exactWordMatch && !fuzzyMatch(titleLower, keywords)) {
+                  continue;
+                }
+              }
+
+              final durationData = parseDuration(description);
+
+              final jobPath = (map['job_path'] ?? '').toString().trim();
+              final applyLink = jobPath.isNotEmpty
+                  ? Uri.https('www.amazon.jobs', jobPath).toString()
+                  : careerUri.toString();
+              final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
+              if (seen.contains(key)) continue;
+              seen.add(key);
+
+              final location =
+                  (map['normalized_location'] ?? map['location'] ?? '')
+                      .toString()
+                      .trim();
+
+              rows.add(
+                ScanResultRow(
+                  company: companyName,
+                  title: title,
+                  companyUrl: careerUri.toString(),
+                  applyLink: applyLink,
+                  location: location.isEmpty ? 'Not specified' : location,
+                  duration: durationData.$1,
+                  deadline: '—',
+                  source: 'Amazon Search JSON',
+                  error: '',
+                ),
               );
-              return pattern.hasMatch(titleLower) ||
-                  pattern.hasMatch(descLower);
-            });
-            if (!exactWordMatch && !fuzzyMatch(titleLower, keywords)) continue;
+            }
 
-            final durationData = parseDuration(description);
+            if (rows.length >= 800) {
+              break;
+            }
 
-            final jobPath = (map['job_path'] ?? '').toString().trim();
-            final applyLink = jobPath.isNotEmpty
-                ? Uri.https('www.amazon.jobs', jobPath).toString()
-                : careerUri.toString();
-            final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
-            if (seen.contains(key)) continue;
-            seen.add(key);
-
-            final location =
-                (map['normalized_location'] ?? map['location'] ?? '')
-                    .toString()
-                    .trim();
-
-            rows.add(
-              ScanResultRow(
-                company: companyName,
-                title: title,
-                companyUrl: careerUri.toString(),
-                applyLink: applyLink,
-                location: location.isEmpty ? 'Not specified' : location,
-                duration: durationData.$1,
-                deadline: '—',
-                source: 'Amazon Search JSON',
-                error: '',
-              ),
-            );
-          }
-
-          if (rows.length >= 200) {
-            break;
+            offset += limit;
           }
         }
 
@@ -11003,10 +11139,9 @@ class ScraperService {
     if (host.contains('careers.adyen.com') ||
         host.contains('greenhouse.io') ||
         host.contains('www.exodus.com') ||
-        (host.contains('copper.co') &&
-            careerUri.path.toLowerCase().contains('/company/careers')) ||
-        (host.contains('consensys.io') &&
-            careerUri.path.toLowerCase().contains('/open-roles'))) {
+        host.contains('copper.co') ||
+        host.contains('consensys.io') ||
+        host.contains('layerzero.network')) {
       try {
         var board = 'adyen';
         if (host.contains('copper.co')) {
@@ -11059,12 +11194,16 @@ class ScraperService {
 
           final titleLower = title.toLowerCase();
           final contentLower = content.toLowerCase();
-          final exactWordMatch = keywords.any((kw) {
-            final pattern = RegExp('\\b${RegExp.escape(kw.toLowerCase())}\\b');
-            return pattern.hasMatch(titleLower) ||
-                pattern.hasMatch(contentLower);
-          });
-          if (!exactWordMatch && !fuzzyMatch(titleLower, keywords)) continue;
+          if (keywords.isNotEmpty) {
+            final exactWordMatch = keywords.any((kw) {
+              final pattern = RegExp(
+                '\\b${RegExp.escape(kw.toLowerCase())}\\b',
+              );
+              return pattern.hasMatch(titleLower) ||
+                  pattern.hasMatch(contentLower);
+            });
+            if (!exactWordMatch && !fuzzyMatch(titleLower, keywords)) continue;
+          }
 
           final durationData = parseDuration(content);
 
@@ -11415,6 +11554,19 @@ query ApiJobBoardWithTeams($organizationHostedJobsPageName: String!) {
 
       final title = link.querySelector('h2')?.text.trim() ?? link.text.trim();
       if (title.isEmpty) continue;
+
+      final titleLower = title.toLowerCase();
+      if (titleLower == 'prev' ||
+          titleLower == 'next' ||
+          titleLower == 'previous' ||
+          titleLower == 'first' ||
+          titleLower == 'last' ||
+          titleLower == 'view details' ||
+          titleLower == 'apply' ||
+          titleLower == 'read more' ||
+          titleLower == 'learn more') {
+        continue;
+      }
 
       final applyLink = baseUri.resolve(href).toString();
       final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
