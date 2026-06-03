@@ -60,6 +60,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: dart-lang/setup-dart@v1
+
       - name: Download all shard artifacts
         uses: actions/download-artifact@v4
         with:
@@ -71,6 +73,22 @@ jobs:
         run: |
           jq -s 'add' shards/*/jobs.json > jobs.json
           echo "Merged $(jq 'length' jobs.json) jobs from $(ls shards | wc -l) shards"
+
+      # Pull the currently-published dataset (previous run) to diff against.
+      # First run / no release yet → no prev_data, and the marker leaves all new.
+      - name: Download previous dataset
+        run: |
+          gh release download latest --pattern jobs.zip --output prev.zip || echo "No previous release yet"
+          if [ -f prev.zip ]; then unzip -o prev.zip -d prev_data; fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Mark each job new vs previously-seen (rewrites isNew in place).
+      - name: Mark new vs previously-seen jobs
+        working-directory: scraper
+        run: |
+          dart pub get
+          dart run bin/mark_new.dart ../prev_data/jobs.json ../jobs.json ../jobs.json
 
       - name: Zip dataset
         run: zip jobs.zip jobs.json
