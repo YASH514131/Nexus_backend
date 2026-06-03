@@ -106,19 +106,44 @@ jobs:
       - name: Install huggingface_hub
         run: pip install huggingface_hub
 
+      # HF throttles frequent dataset commits with 429s. Retry with long backoff
+      # so transient throttling doesn't fail the run. config.json is updated only
+      # after this succeeds (fail-fast ordering), so the app never points at a
+      # version HF doesn't actually have. Token via env, not interpolated inline.
       - name: Upload to Hugging Face
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          python3 -c "
+          python3 - <<'PY'
+          import os, sys, time
           from huggingface_hub import HfApi
-          HfApi().upload_file(
-            path_or_fileobj='jobs.zip',
-            path_in_repo='jobs.zip',
-            repo_id='Yash514311/nexus-jobs',
-            repo_type='dataset',
-            token='${{ secrets.HF_TOKEN }}'
-          )
-          print('Uploaded to Hugging Face successfully')
-          "
+          try:
+              from huggingface_hub.errors import HfHubHTTPError
+          except ImportError:
+              from huggingface_hub.utils import HfHubHTTPError
+
+          api = HfApi()
+          attempts, delay = 5, 30
+          for i in range(1, attempts + 1):
+              try:
+                  api.upload_file(
+                      path_or_fileobj='jobs.zip',
+                      path_in_repo='jobs.zip',
+                      repo_id='Yash514311/nexus-jobs',
+                      repo_type='dataset',
+                      token=os.environ['HF_TOKEN'],
+                  )
+                  print('Uploaded to Hugging Face successfully')
+                  sys.exit(0)
+              except HfHubHTTPError as e:
+                  code = getattr(getattr(e, 'response', None), 'status_code', None)
+                  if (code == 429 or '429' in str(e)) and i < attempts:
+                      print(f'HF rate-limited (429), attempt {i}/{attempts}; sleeping {delay}s', flush=True)
+                      time.sleep(delay)
+                      delay = min(delay * 2, 240)
+                      continue
+                  raise
+          PY
 
       - name: Update config.json
         run: |
