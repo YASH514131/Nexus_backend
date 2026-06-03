@@ -5,34 +5,74 @@ on:
     - cron: '0 */12 * * *'
   workflow_dispatch:
 
+# Keep these two in sync: the matrix below must list 0 .. SHARD_COUNT-1.
+env:
+  SHARD_COUNT: '10'
+  CONCURRENCY: '50'
+  CALLS_PER_SECOND: '2.0'
+
 jobs:
+  # ── Fan-out ────────────────────────────────────────────────────────────────
+  # N parallel runners, each scraping a disjoint round-robin slice of companies.
+  # fail-fast: false so one bad shard never aborts the rest.
   scrape:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dart-lang/setup-dart@v1
+
+      - name: Scrape shard ${{ matrix.shard }}
+        working-directory: scraper
+        env:
+          SHARD_INDEX: ${{ matrix.shard }}
+          SHARD_COUNT: ${{ env.SHARD_COUNT }}
+          CONCURRENCY: ${{ env.CONCURRENCY }}
+          CALLS_PER_SECOND: ${{ env.CALLS_PER_SECOND }}
+          OUTPUT: jobs.json
+        run: |
+          dart pub get
+          dart run bin/scraper.dart
+
+      - name: Upload shard artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jobs-shard-${{ matrix.shard }}
+          path: scraper/jobs.json
+          retention-days: 1
+
+  # ── Fan-in ─────────────────────────────────────────────────────────────────
+  # Merge every shard's JSON into one dataset, then publish (Releases + HF + Pages).
+  merge:
+    needs: scrape
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dart-lang/setup-dart@v1
+      - name: Download all shard artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: shards
+          pattern: jobs-shard-*
 
-      # 1. Run scraper → produces scraper/jobs.json
-      - name: Run scraper
+      # Each shard's jobs.json is a JSON array; `jq -s add` concatenates them.
+      - name: Merge shards into jobs.json
         run: |
-          cd scraper
-          dart pub get
-          dart run bin/scraper.dart
+          jq -s 'add' shards/*/jobs.json > jobs.json
+          echo "Merged $(jq 'length' jobs.json) jobs from $(ls shards | wc -l) shards"
 
-      # 2. Move jobs.json to root then zip
       - name: Zip dataset
-        run: |
-          mv scraper/jobs.json jobs.json
-          zip jobs.zip jobs.json
+        run: zip jobs.zip jobs.json
 
-      # 3. Generate sha256 hash
       - name: Generate hash
         run: echo "HASH=$(sha256sum jobs.zip | cut -d' ' -f1)" >> $GITHUB_ENV
 
-      # 4. Create release if not exists, then upload
       - name: Upload to GitHub Releases
         run: |
           gh release view latest || gh release create latest --title "Latest Dataset" --notes "Auto-updated dataset"
@@ -40,7 +80,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 5. Upload to Hugging Face
       - name: Install huggingface_hub
         run: pip install huggingface_hub
 
@@ -58,7 +97,6 @@ jobs:
           print('Uploaded to Hugging Face successfully')
           "
 
-      # 6. Update config.json
       - name: Update config.json
         run: |
           echo '{
@@ -68,7 +106,6 @@ jobs:
             "min_app_version": "3.0.0"
           }' > docs/config.json
 
-      # 7. Push config.json — skip if nothing changed
       - name: Push config.json to GitHub Pages
         run: |
           git config user.name "github-actions"
