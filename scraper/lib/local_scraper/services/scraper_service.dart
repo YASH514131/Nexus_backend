@@ -378,35 +378,45 @@ class ScraperService {
 
   Future<String?> _fetch(Uri uri) async {
     final domain = uri.host;
-    await _limiter.wait(domain);
 
-    try {
-      final response = await _client
-          .get(
-            uri,
-            headers: {
-              'User-Agent':
-                  userAgents[DateTime.now().millisecond % userAgents.length],
-              'Accept-Language': 'en-US,en;q=0.9',
-              'Accept':
-                  'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-              'DNT': '1',
-            },
-          )
-          .timeout(const Duration(seconds: 10));
+    // Retry on 429 instead of returning null. Callers treat a null page as
+    // "no more pages" and stop paginating, so a single rate-limited request
+    // used to silently drop the rest of a company's jobs — which gutted hit
+    // counts when scraping big multi-page sites from datacenter IPs.
+    // penalize() grows the per-host backoff, so each retry waits longer via
+    // _limiter.wait(); the whole loop is still bounded by the per-company
+    // hard timeout upstream.
+    for (var attempt = 0; attempt < 3; attempt++) {
+      await _limiter.wait(domain);
+      try {
+        final response = await _client
+            .get(
+              uri,
+              headers: {
+                'User-Agent':
+                    userAgents[DateTime.now().millisecond % userAgents.length],
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept':
+                    'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'DNT': '1',
+              },
+            )
+            .timeout(const Duration(seconds: 10));
 
-      if (response.statusCode == 429) {
-        _limiter.penalize(domain);
+        if (response.statusCode == 429) {
+          _limiter.penalize(domain);
+          continue; // wait out the now-larger backoff and try again
+        }
+        if (response.statusCode >= 400) {
+          return null;
+        }
+        _limiter.reset(domain);
+        return response.body;
+      } catch (_) {
         return null;
       }
-      if (response.statusCode >= 400) {
-        return null;
-      }
-      _limiter.reset(domain);
-      return response.body;
-    } catch (_) {
-      return null;
     }
+    return null; // exhausted 429 retries
   }
 
   Future<String?> _fetchRendered(Uri uri) async {

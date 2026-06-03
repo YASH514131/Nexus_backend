@@ -9,7 +9,10 @@ on:
 env:
   SHARD_COUNT: '10'
   CONCURRENCY: '50'
-  CALLS_PER_SECOND: '2.0'
+  # Gentle per-host rate: datacenter IPs get 429'd by big career sites far more
+  # than residential ones, and a 429 mid-pagination drops the rest of a
+  # company's jobs. Combined with retry-on-429 in _fetch, this keeps counts up.
+  CALLS_PER_SECOND: '1.0'
   # Generous ceiling so slow, high-yield corporate sites (e.g. Accenture ~83s /
   # 7k+ jobs) finish instead of being dropped wholesale. Workers run in parallel,
   # so this only adds wall time when a company actually hangs, per shard.
