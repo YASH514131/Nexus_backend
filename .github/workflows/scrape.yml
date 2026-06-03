@@ -10,6 +10,10 @@ env:
   SHARD_COUNT: '10'
   CONCURRENCY: '50'
   CALLS_PER_SECOND: '2.0'
+  # Generous ceiling so slow, high-yield corporate sites (e.g. Accenture ~83s /
+  # 7k+ jobs) finish instead of being dropped wholesale. Workers run in parallel,
+  # so this only adds wall time when a company actually hangs, per shard.
+  TIMEOUT_SECONDS: '300'
 
 jobs:
   # ── Fan-out ────────────────────────────────────────────────────────────────
@@ -33,6 +37,7 @@ jobs:
           SHARD_COUNT: ${{ env.SHARD_COUNT }}
           CONCURRENCY: ${{ env.CONCURRENCY }}
           CALLS_PER_SECOND: ${{ env.CALLS_PER_SECOND }}
+          TIMEOUT_SECONDS: ${{ env.TIMEOUT_SECONDS }}
           OUTPUT: jobs.json
         run: |
           dart pub get

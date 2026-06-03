@@ -17,6 +17,7 @@ import 'package:scraper/default_companies.dart';
 ///   SHARD_COUNT      total number of shards              (default 1)
 ///   CONCURRENCY      max companies scraped at once        (default 50)
 ///   CALLS_PER_SECOND per-host request rate                (default 2.0)
+///   TIMEOUT_SECONDS  per-company hard timeout             (default 300)
 ///   OUTPUT           output file path                     (default jobs.json)
 int _envInt(String key, int fallback) {
   final raw = Platform.environment[key]?.trim();
@@ -40,6 +41,13 @@ Future<void> main() async {
   final shardCount = _envInt('SHARD_COUNT', 1);
   final concurrency = _envInt('CONCURRENCY', 50);
   final callsPerSecond = _envDouble('CALLS_PER_SECOND', 2.0);
+  // Generous by design: most companies finish in seconds, but big corporate
+  // career sites paginate for 60-90s+ and yield thousands of jobs each. Because
+  // workers run concurrently, a high cap costs no cumulative time — it only
+  // bites when a company genuinely hangs, and even then only its own shard
+  // waits. A cap that's too low silently drops a slow company's ENTIRE result
+  // set (timeout is all-or-nothing), which is what gutted the hit count at 40s.
+  final timeoutSeconds = _envInt('TIMEOUT_SECONDS', 300);
   final outputPath = _envStr('OUTPUT', 'jobs.json');
 
   if (shardCount < 1 || shardIndex < 0 || shardIndex >= shardCount) {
@@ -68,13 +76,14 @@ Future<void> main() async {
     scanLimit: 500,
     concurrency: 10,
     enableJs: false,
-    hardTimeoutSeconds: 40,
+    hardTimeoutSeconds: timeoutSeconds,
   );
 
   print(
     'NEXUS scraper · shard $shardIndex/$shardCount · '
     '${companies.length}/${allCompanies.length} companies · '
-    'concurrency=$concurrency · ${callsPerSecond}req/s/host',
+    'concurrency=$concurrency · ${callsPerSecond}req/s/host · '
+    'timeout=${timeoutSeconds}s',
   );
 
   if (companies.isEmpty) {
