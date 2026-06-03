@@ -2,7 +2,7 @@ name: NEXUS Scraper
 
 on:
   schedule:
-    - cron: '0 */12 * * *'
+    - cron: '0 */2 * * *'
   workflow_dispatch:
 
 # Keep these two in sync: the matrix below must list 0 .. SHARD_COUNT-1.
