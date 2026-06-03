@@ -605,11 +605,16 @@ class ScraperService {
         final query = keywords.isEmpty ? '' : keywords.join(' ');
 
         final random = math.Random();
-        const totalEstimatedPages = 834;
-        const pagesToScrape = 834;
-        const batchSize = 10;
+        // The API caps results at ~10k (totalHits overMaxHits) and honours
+        // maxResultSize=100, so the whole catalogue needs ~100 requests of 100
+        // instead of 834 of 12. ~8x fewer requests => the scan finishes in
+        // ~20s instead of 80-150s (and >300s from CI's datacenter IP, where the
+        // per-company timeout was cutting it to zero), for the same job yield.
+        const totalEstimatedPages = 100;
+        const pagesToScrape = 100;
+        const batchSize = 6;
 
-        // Generate 200 unique random page numbers
+        // Random order across the pages (mild bot-detection evasion).
         final pageSet = <int>{};
         while (pageSet.length < pagesToScrape) {
           pageSet.add(random.nextInt(totalEstimatedPages) + 1);
@@ -624,7 +629,7 @@ class ScraperService {
 
           await Future.wait(
             currentBatch.map((pageNumber) async {
-              int resultsPerPage = 12;
+              int resultsPerPage = 100;
               int startIndex = (pageNumber - 1) * resultsPerPage;
 
               final apiUri = Uri.parse(
