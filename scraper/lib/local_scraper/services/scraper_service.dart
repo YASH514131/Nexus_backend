@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:html/dom.dart' as html_dom;
 import 'package:html/parser.dart' as html_parser;
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 import '../models.dart';
 import 'career_discovery.dart';
 import 'extractor.dart';
@@ -15,8 +17,14 @@ import 'robots_checker.dart';
 
 class ScraperService {
   ScraperService({http.Client? client, double callsPerSecond = 0.8})
-    : _client = client ?? http.Client(),
+    : _client = client ?? _createDefaultClient(),
       _limiter = RateLimiter(callsPerSecond: callsPerSecond);
+
+  static http.Client _createDefaultClient() {
+    final inner = HttpClient()
+      ..maxConnectionsPerHost = 100;
+    return IOClient(inner);
+  }
 
   final http.Client _client;
   final RateLimiter _limiter;
@@ -128,6 +136,20 @@ class ScraperService {
       discoveredUri: careerUri,
     );
 
+    final careerHost = careerUri.host.toLowerCase();
+    if (careerHost.contains('limitbreak.com') ||
+        careerHost.contains('careers.loreal.com') ||
+        careerHost.contains('loreal.com')) {
+      final apiRows = await _fetchKnownJsonApiRows(
+        companyName: company.name,
+        careerUri: knownApiSeedUri,
+        keywords: config.keywords,
+      );
+      if (apiRows.isNotEmpty) {
+        return apiRows;
+      }
+    }
+
     final html = await _fetch(careerUri);
     String? renderedHtml;
     if (html == null || html.trim().isEmpty) {
@@ -169,7 +191,6 @@ class ScraperService {
       ];
     }
 
-    final careerHost = careerUri.host.toLowerCase();
     final shouldPrioritizeKnownApi = _isPrioritizedKnownApi(careerHost);
     if (shouldPrioritizeKnownApi) {
       final apiRows = await _fetchKnownJsonApiRows(
@@ -373,6 +394,11 @@ class ScraperService {
         loweredHost.contains('amazon.jobs') ||
         loweredHost.contains('accenture.com') ||
         loweredHost.contains('careers.amd.com') ||
+        loweredHost.contains('search.jobs.barclays') ||
+        loweredHost.contains('globalcareers.lge.com') ||
+        loweredHost.contains('limitbreak.com') ||
+        loweredHost.contains('freshteam.com') ||
+        loweredHost.contains('careers.loreal.com') ||
         loweredHost.contains('careers.amgen.com');
   }
 
@@ -10472,13 +10498,16 @@ class ScraperService {
 
     if (host.contains('jobs.lever.co') ||
         host.contains('careers.coupa.com') ||
-        host.contains('careers.cred.club')) {
+        host.contains('careers.cred.club') ||
+        host.contains('limitbreak.com')) {
       try {
         late final String board;
         if (host.contains('careers.coupa.com')) {
           board = 'coupa';
         } else if (host.contains('careers.cred.club')) {
           board = 'cred';
+        } else if (host.contains('limitbreak.com')) {
+          board = 'limitbreak';
         } else {
           final segments = careerUri.pathSegments
               .map((s) => s.trim())
@@ -10744,6 +10773,268 @@ class ScraperService {
                   duration: durationData.$1,
                   deadline: '—',
                   source: 'Amgen TalentBrew API',
+                  error: '',
+                ),
+              );
+            }
+          }
+
+          if (rows.length >= 800) {
+            break;
+          }
+        }
+
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (host.contains('globalcareers.lge.com')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final seen = <String>{};
+        final matchTerms = keywords;
+
+        var page = 1;
+        var totalPages = 1;
+        const size = 100;
+
+        while (page <= totalPages && page <= 20) {
+          final uri = Uri.parse(
+            'https://globalcareers.lge.com/api/job/v1/jobs/?page=$page&size=$size',
+          );
+          final response = await _client
+              .get(
+                uri,
+                headers: const {
+                  'Accept': 'application/json',
+                  'User-Agent':
+                      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                },
+              )
+              .timeout(const Duration(seconds: 15));
+
+          if (response.statusCode >= 400 || response.body.trim().isEmpty) {
+            break;
+          }
+
+          final decoded = jsonDecode(response.body);
+          if (decoded is! Map || decoded['successOrNot'] != 'Y') {
+            break;
+          }
+
+          final data = decoded['data'];
+          if (data is! Map) {
+            break;
+          }
+
+          final list = data['list'] as List? ?? [];
+          if (list.isEmpty) {
+            break;
+          }
+
+          final total = data['total'] ?? 0;
+          totalPages = (total / size).ceil();
+
+          for (final item in list.whereType<Map>()) {
+            final id = item['id']?.toString() ?? '';
+            final title = (item['title'] ?? '').toString().trim();
+            if (title.isEmpty || id.isEmpty) continue;
+
+            final descriptionHtml = (item['content'] ?? '').toString();
+            final doc = html_parser.parse(descriptionHtml);
+            final description = doc.body?.text.trim() ?? '';
+
+            final titleLower = title.toLowerCase();
+            final descLower = description.toLowerCase();
+
+            if (keywords.isNotEmpty) {
+              final exactWordMatch = matchTerms.any((kw) {
+                final pattern = RegExp(
+                  '\\b${RegExp.escape(kw.toLowerCase())}\\b',
+                );
+                return pattern.hasMatch(titleLower) ||
+                    pattern.hasMatch(descLower);
+              });
+              if (!exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
+                continue;
+              }
+            }
+
+            final applyLink = 'https://globalcareers.lge.com/jobs/$id';
+            final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
+            if (seen.contains(key)) continue;
+            seen.add(key);
+
+            // Format location as "location, country (corp)" if available
+            final locationVal = (item['location'] ?? '').toString().trim();
+            final countryVal = (item['cntryNm'] ?? '').toString().trim();
+            final corpVal = (item['corpNm'] ?? item['corpCd'] ?? '')
+                .toString()
+                .trim();
+            
+            final locParts = <String>[];
+            if (locationVal.isNotEmpty) locParts.add(locationVal);
+            if (countryVal.isNotEmpty) locParts.add(countryVal);
+            var locationStr = locParts.join(', ');
+            if (locationStr.isEmpty) locationStr = 'Not specified';
+            if (corpVal.isNotEmpty) {
+              locationStr = '$locationStr ($corpVal)';
+            }
+
+            final durationData = parseDuration(description);
+
+            rows.add(
+              ScanResultRow(
+                company: companyName,
+                title: title,
+                companyUrl: careerUri.toString(),
+                applyLink: applyLink,
+                location: locationStr,
+                duration: durationData.$1,
+                deadline: '—',
+                source: 'LG Careers API',
+                error: '',
+              ),
+            );
+          }
+
+          page++;
+        }
+
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (host.contains('search.jobs.barclays')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final seen = <String>{};
+        final matchTerms = keywords;
+        final queryTerms = keywords.isEmpty ? [''] : keywords;
+
+        for (final query in queryTerms) {
+          var totalPages = 1;
+          var recordsPerPage = 100;
+
+          for (var page = 1; page <= totalPages && page <= 120; page++) {
+            final uri =
+                Uri.https('search.jobs.barclays', '/search-jobs/results', {
+                  'Keywords': query,
+                  'Location': '',
+                  'Distance': '50',
+                  'Latitude': '',
+                  'Longitude': '',
+                  'ShowRadius': 'False',
+                  'CurrentPage': '$page',
+                  'RecordsPerPage': '$recordsPerPage',
+                  'ActiveFacetID': '0',
+                  'CustomFacetName': '',
+                  'FacetTerm': '',
+                  'FacetType': '0',
+                  'SearchResultsModuleName': 'Search Results',
+                  'SortCriteria': '0',
+                  'SortDirection': '0',
+                  'SearchType': '5',
+                  'KeywordType': '',
+                  'LocationType': '',
+                  'LocationPath': '',
+                  'OrganizationIds': '13015',
+                  'PostalCode': '',
+                  'ResultsType': '0',
+                  'TotalContentResults': '0',
+                  'IsPagination': 'False',
+                });
+
+            final response = await _client
+                .get(
+                  uri,
+                  headers: const {
+                    'accept': 'application/json, text/javascript, */*; q=0.01',
+                    'x-requested-with': 'XMLHttpRequest',
+                    'referer': 'https://search.jobs.barclays/search-jobs',
+                  },
+                )
+                .timeout(const Duration(seconds: 12));
+
+            if (response.statusCode >= 400 || response.body.trim().isEmpty) {
+              continue;
+            }
+
+            final decoded = jsonDecode(response.body);
+            if (decoded is! Map) {
+              continue;
+            }
+
+            final resultsHtml = (decoded['results'] ?? '').toString();
+            if (resultsHtml.trim().isEmpty) {
+              continue;
+            }
+
+            final doc = html_parser.parse(resultsHtml);
+            final section = doc.querySelector('#search-results');
+            final totalPagesAttr = section?.attributes['data-total-pages']
+                ?.trim();
+            final parsedTotalPages = int.tryParse(totalPagesAttr ?? '');
+            if (parsedTotalPages != null && parsedTotalPages > 0) {
+              totalPages = parsedTotalPages;
+            }
+
+            final recordsPerPageAttr = section
+                ?.attributes['data-records-per-page']
+                ?.trim();
+            final parsedRecordsPerPage = int.tryParse(recordsPerPageAttr ?? '');
+            if (parsedRecordsPerPage != null && parsedRecordsPerPage > 0) {
+              recordsPerPage = parsedRecordsPerPage;
+            }
+
+            final entries = _extractTalentBrewEntries(doc, baseUri: careerUri);
+            if (entries.isEmpty) {
+              continue;
+            }
+
+            for (final entry in entries) {
+              final title = (entry['title'] ?? '').trim();
+              if (title.isEmpty) continue;
+
+              final description = (entry['description'] ?? '').trim();
+              final titleLower = title.toLowerCase();
+              final descLower = description.toLowerCase();
+
+              if (keywords.isNotEmpty) {
+                final exactWordMatch = matchTerms.any((kw) {
+                  final pattern = RegExp(
+                    '\\b${RegExp.escape(kw.toLowerCase())}\\b',
+                  );
+                  return pattern.hasMatch(titleLower) ||
+                      pattern.hasMatch(descLower);
+                });
+                if (!exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
+                  continue;
+                }
+              }
+
+              final applyLink = (entry['applyLink'] ?? careerUri.toString())
+                  .trim();
+              final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
+              if (seen.contains(key)) continue;
+              seen.add(key);
+
+              final location = (entry['location'] ?? '').trim();
+              final durationData = parseDuration(description);
+
+              rows.add(
+                ScanResultRow(
+                  company: companyName,
+                  title: title,
+                  companyUrl: careerUri.toString(),
+                  applyLink: applyLink,
+                  location: location.isEmpty ? 'Not specified' : location,
+                  duration: durationData.$1,
+                  deadline: '—',
+                  source: 'Barclays TalentBrew API',
                   error: '',
                 ),
               );
@@ -11258,6 +11549,176 @@ class ScraperService {
           );
         }
 
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (host.contains('freshteam.com')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final html = await _fetch(careerUri);
+        if (html == null || html.trim().isEmpty) {
+          return const [];
+        }
+
+        final doc = html_parser.parse(html);
+        final jobElements = doc.querySelectorAll('a[data-portal-title], .job-list a[href*="/jobs/"]');
+
+        final seen = <String>{};
+        for (final element in jobElements) {
+          final titleElement = element.querySelector('.job-title');
+          final title = titleElement?.text.trim() ?? element.text.trim();
+          if (title.isEmpty) continue;
+
+          final href = element.attributes['href']?.trim() ?? '';
+          if (href.isEmpty) continue;
+          final applyLink = careerUri.resolve(href).toString();
+          
+          final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
+          if (seen.contains(key)) continue;
+          seen.add(key);
+
+          final locationText = element.querySelector('.location-info')?.text.trim() ?? 'Not specified';
+          final locationParts = locationText
+              .split('\n')
+              .map((s) => s.trim())
+              .where((s) => s.isNotEmpty && s.toLowerCase() != 'full time' && s.toLowerCase() != 'part time')
+              .toList();
+          final location = locationParts.isEmpty ? 'Not specified' : locationParts.join(', ');
+
+          final description = element.querySelector('.job-desc')?.text.trim() ?? '';
+          final durationData = parseDuration(description);
+
+          rows.add(
+            ScanResultRow(
+              company: companyName,
+              title: title,
+              companyUrl: careerUri.toString(),
+              applyLink: applyLink,
+              location: location,
+              duration: durationData.$1,
+              deadline: '—',
+              source: 'Freshteam HTML Scan',
+              error: '',
+            ),
+          );
+        }
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (host.contains('careers.loreal.com') || host.contains('loreal.com')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final seen = <String>{};
+
+        void synchronizedAction(void Function() action) {
+          action();
+        }
+
+        var nextOffset = 0;
+        const pageSize = 20;
+        var hasMore = true;
+        const workerCount = 40;
+
+        Future<void> worker() async {
+          while (true) {
+            int currentOffset = -1;
+            synchronizedAction(() {
+              if (!hasMore) {
+                currentOffset = -1;
+              } else {
+                currentOffset = nextOffset;
+                nextOffset += pageSize;
+              }
+            });
+
+            if (currentOffset == -1) break;
+
+            final pageUri = Uri.parse('https://careers.loreal.com/en_US/jobs/SearchJobsAjax?offset=$currentOffset');
+            try {
+              final response = await _client.get(
+                pageUri,
+                headers: {
+                  'User-Agent': userAgents[DateTime.now().millisecond % userAgents.length],
+                  'Accept-Language': 'en-US,en;q=0.9',
+                  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                  'DNT': '1',
+                },
+              ).timeout(const Duration(seconds: 10));
+
+              if (response.statusCode != 200 || response.body.contains('No jobs found')) {
+                synchronizedAction(() {
+                  hasMore = false;
+                });
+                break;
+              }
+
+              final doc = html_parser.parse(response.body);
+              final containers = doc.querySelectorAll('.article__header__text');
+              if (containers.isEmpty) {
+                synchronizedAction(() {
+                  hasMore = false;
+                });
+                break;
+              }
+
+              final pageRows = <ScanResultRow>[];
+              for (final container in containers) {
+                final link = container.querySelector('a[href*="/jobs/JobDetail/"]');
+                if (link == null) continue;
+                final title = link.text.trim();
+                if (title.isEmpty || title.toLowerCase() == 'apply now') continue;
+
+                final applyLink = link.attributes['href']?.trim() ?? '';
+
+                final spans = container.querySelectorAll('.article__header__text__subtitle span');
+                String location = 'Not specified';
+                String duration = '—';
+                if (spans.isNotEmpty) {
+                  location = spans[0].text.trim();
+                  if (location.isEmpty) location = 'Not specified';
+                }
+                if (spans.length > 1) {
+                  duration = spans[1].text.trim();
+                  if (duration.isEmpty) duration = '—';
+                }
+
+                pageRows.add(
+                  ScanResultRow(
+                    company: companyName,
+                    title: title,
+                    companyUrl: careerUri.toString(),
+                    applyLink: applyLink,
+                    location: location,
+                    duration: duration,
+                    deadline: '—',
+                    source: 'L\'Oreal Careers Ajax API',
+                    error: '',
+                  ),
+                );
+              }
+
+              synchronizedAction(() {
+                for (final row in pageRows) {
+                  final key = '${row.title.toLowerCase()}|${row.applyLink.toLowerCase()}';
+                  if (!seen.contains(key)) {
+                    seen.add(key);
+                    rows.add(row);
+                  }
+                }
+              });
+            } catch (_) {
+              // If a page request fails, allow other workers to proceed
+            }
+          }
+        }
+
+        await Future.wait(List.generate(workerCount, (_) => worker()));
         return rows;
       } catch (_) {
         return const [];

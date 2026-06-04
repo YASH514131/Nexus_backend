@@ -111,6 +111,7 @@ const Map<String, String> defaultCompanyUrls = {
   'e6data': 'https://e6data.zohorecruit.in/jobs/careers',
   'Bullish': 'https://bullish.wd3.myworkdayjobs.com/Bullish',
   'BlackRock': 'https://careers.blackrock.com/search-jobs',
+  'Barclays': 'https://search.jobs.barclays/search-jobs',
   'blackline':
       'https://careers.blackline.com/careers-home/jobs?limit=100&page=1',
   'JPMorgan (Onyx)':
@@ -145,7 +146,7 @@ const Map<String, String> defaultCompanyUrls = {
   'Gala Games': 'https://ats.rippling.com/gala/jobs',
   'Illuvium': 'https://illuvium.recruitee.com/',
   'Proof of Play': 'https://jobs.ashbyhq.com/proofofplay',
-  'Limit Break': 'https://limitbreak.com/careers.html',
+  'Limit Break': 'https://limitbreak.com/en/careers',
   'bread financial': 'https://careers.breadfinancial.com/us/en/search-results',
   'Azra Games': 'https://azragames.com/careers/#brxe-ioahlq',
   'Zora': 'https://job-boards.greenhouse.io/zora',
@@ -214,6 +215,7 @@ const Map<String, String> defaultCompanyUrls = {
   'samsung':
       'https://sec.wd3.myworkdayjobs.com/en-US/Samsung_Careers?locations=189767dd6c9201b802603c83a5292c78&Location_Country=c4f78be1a8f14da0ab49ce1162348a5e&hiringCompany=189767dd6c9201554f3e5312a7290a85',
   'LG electronics': 'https://globalcareers.lge.com/jobs',
+  'Locus': 'https://locus.freshteam.com/jobs',
   'HCL Tech': 'https://careers.hcltech.com/go/NonTPDemand/9558355/',
   'Hyperverge': 'https://hyperverge.co/careers/',
   'MyJar': 'https://changejar.applytojob.com/apply',
@@ -297,7 +299,7 @@ const Map<String, String> defaultCompanyUrls = {
       'https://jobs.kellanova.com/search/?createNewAlert=false&q=&locationsearch=&optionsFacetsDD_department=&optionsFacetsDD_country=',
   'danone':
       'https://careers.danone.com/en-global/jobs.html?10000_group.propertyvalues.property=jcr%3Acontent%2Fdata%2Fmaster%2Fcountry&10000_group.propertyvalues.operation=equals&10000_group.propertyvalues.35_values=India&layout=teaserList&p.offset=0&p.limit=0&fulltext=*',
-  'loreal': 'https://careers.loreal.com/en_US/jobs/SearchJobs/?3_110_3=18031',
+  'loreal': 'https://careers.loreal.com/en_US/jobs/SearchJobs',
   'starbucks':
       'https://starbucks.eightfold.ai/careers?location_radius_type=mi&location_distance_km=16.09&hl=en-US&start=0&location=India&sort_by=distance&filter_include_remote=1',
   'McKinsey':
