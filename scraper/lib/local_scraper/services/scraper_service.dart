@@ -139,7 +139,11 @@ class ScraperService {
     final careerHost = careerUri.host.toLowerCase();
     if (careerHost.contains('limitbreak.com') ||
         careerHost.contains('careers.loreal.com') ||
-        careerHost.contains('loreal.com')) {
+        careerHost.contains('loreal.com') ||
+        careerHost.contains('m2pfintech.com') ||
+        careerHost.contains('maersk.com') ||
+        careerHost.contains('mars.com') ||
+        careerHost.contains('mastercard.com')) {
       final apiRows = await _fetchKnownJsonApiRows(
         companyName: company.name,
         careerUri: knownApiSeedUri,
@@ -399,6 +403,10 @@ class ScraperService {
         loweredHost.contains('limitbreak.com') ||
         loweredHost.contains('freshteam.com') ||
         loweredHost.contains('careers.loreal.com') ||
+        loweredHost.contains('m2pfintech.com') ||
+        loweredHost.contains('maersk.com') ||
+        loweredHost.contains('mars.com') ||
+        loweredHost.contains('mastercard.com') ||
         loweredHost.contains('careers.amgen.com');
   }
 
@@ -505,6 +513,18 @@ class ScraperService {
   }) {
     final discoveredHost = discoveredUri.host.toLowerCase();
     final originalHost = originalUri.host.toLowerCase();
+
+    if (originalHost.contains('maersk.com')) {
+      return Uri.parse('https://maersk.wd3.myworkdayjobs.com/Maersk_Careers');
+    }
+
+    if (originalHost.contains('mars.com')) {
+      return Uri.parse('https://careers.mars.com/widgets');
+    }
+
+    if (originalHost.contains('mastercard.com')) {
+      return Uri.parse('https://careers.mastercard.com/widgets');
+    }
 
     if (originalHost.contains('gauntlet.xyz')) {
       return Uri.https('jobs.lever.co', '/gauntlet');
@@ -622,6 +642,303 @@ class ScraperService {
     required List<String> keywords,
   }) async {
     final host = careerUri.host.toLowerCase();
+
+    if (host.contains('careers.mars.com') ||
+        host.contains('mars.com') ||
+        host.contains('careers.mastercard.com') ||
+        host.contains('mastercard.com')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final seen = <String>{};
+        final matchTerms = keywords;
+        const pageSize = 100;
+
+        Future<Map?> fetchOffset(int offset) async {
+          final widgetHost = careerUri.host;
+          final uri = Uri.https(widgetHost, '/widgets');
+          try {
+            final response = await _client.post(
+              uri,
+              headers: const {
+                'Content-Type': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+              },
+              body: jsonEncode({
+                "lang": "",
+                "deviceType": "desktop",
+                "country": "",
+                "pageName": "search-results",
+                "ddoKey": "refineSearch",
+                "sortBy": "",
+                "subsearch": "",
+                "from": offset,
+                "jobs": true,
+                "counts": true,
+                "all_fields": ["remote", "country", "state", "city", "experienceLevel", "category", "profession", "employmentType", "jobLevel"],
+                "pageType": "search-results",
+                "size": pageSize,
+                "clearAll": false,
+                "jdsource": "facets",
+                "isSliderEnable": false,
+                "pageId": "page1",
+                "siteType": "external",
+                "keywords": "",
+                "global": true,
+                "selected_fields": {},
+                "locationData": {}
+              }),
+            ).timeout(const Duration(seconds: 15));
+
+            if (response.statusCode == 200) {
+              return jsonDecode(response.body);
+            }
+          } catch (_) {}
+          return null;
+        }
+
+        void processJobs(List jobs) {
+          for (final job in jobs.whereType<Map>()) {
+            final title = (job['title'] ?? '').toString().trim();
+            if (title.isEmpty) continue;
+
+            final jobSeq = job['jobSeqNo'] ?? job['reqId'] ?? '';
+            if (jobSeq.toString().isEmpty) continue;
+
+            var applyLink = (job['applyUrl'] ?? '').toString().trim();
+            if (applyLink.isEmpty) {
+              applyLink = 'https://${careerUri.host}/global/en/job/$jobSeq';
+            }
+
+            final location = (job['location'] ?? '').toString().trim();
+            final postedDate = (job['postedDate'] ?? '').toString().trim();
+            final teaser = (job['descriptionTeaser'] ?? '').toString().trim();
+            final category = (job['category'] ?? '').toString().trim();
+
+            final searchable = [
+              title,
+              location,
+              teaser,
+              category,
+            ].where((p) => p.trim().isNotEmpty).join(' | ').toLowerCase();
+
+            if (keywords.isNotEmpty) {
+              bool hasKeywordVariant(String kw) {
+                final k = kw.toLowerCase().trim();
+                if (k.isEmpty || k.length < 3) return false;
+                if (searchable.contains(k)) return true;
+                if (k.endsWith('y') && k.length > 1) {
+                  final stem = k.substring(0, k.length - 1);
+                  if (searchable.contains('${stem}ies')) return true;
+                }
+                if (k.endsWith('e') && k.length > 1) {
+                  final stem = k.substring(0, k.length - 1);
+                  if (searchable.contains('${k}d') ||
+                      searchable.contains('${stem}ing')) {
+                    return true;
+                  }
+                }
+                return searchable.contains('${k}s') ||
+                    searchable.contains('${k}es') ||
+                    searchable.contains('${k}ing') ||
+                    searchable.contains('${k}ed');
+              }
+
+              final titleLower = title.toLowerCase();
+              final exactWordMatch = matchTerms.any((kw) {
+                final pattern = RegExp('\\b${RegExp.escape(kw.toLowerCase())}\\b');
+                return pattern.hasMatch(searchable);
+              });
+              final variantMatch = matchTerms.any(hasKeywordVariant);
+              if (!exactWordMatch &&
+                  !variantMatch &&
+                  !fuzzyMatch(titleLower, matchTerms) &&
+                  !fuzzyMatch(searchable, matchTerms)) {
+                continue;
+              }
+            }
+
+            final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
+            if (!seen.contains(key)) {
+              seen.add(key);
+              rows.add(
+                ScanResultRow(
+                  company: companyName,
+                  title: title,
+                  companyUrl: careerUri.toString(),
+                  applyLink: applyLink,
+                  location: location.isEmpty ? 'Not specified' : location,
+                  duration: postedDate.isEmpty ? '—' : 'Posted: $postedDate',
+                  deadline: '—',
+                  source: '$companyName Phenom People API',
+                  error: '',
+                ),
+              );
+            }
+          }
+        }
+
+        final firstData = await fetchOffset(0);
+        if (firstData != null) {
+          final refineSearch = firstData['refineSearch'];
+          if (refineSearch is Map) {
+            final totalHits = refineSearch['totalHits'] ?? 0;
+            final jobsData = refineSearch['data'];
+            if (jobsData is Map && jobsData['jobs'] is List) {
+              final initialJobs = jobsData['jobs'] as List;
+              processJobs(initialJobs);
+
+              if (totalHits > pageSize) {
+                final totalPages = (totalHits / pageSize).ceil();
+                final offsets = List.generate(totalPages - 1, (i) => (i + 1) * pageSize);
+                
+                const batchSize = 10;
+                for (var i = 0; i < offsets.length; i += batchSize) {
+                  final chunk = offsets.sublist(
+                    i,
+                    i + batchSize > offsets.length ? offsets.length : i + batchSize,
+                  );
+                  
+                  await Future.wait(
+                    chunk.map((offset) async {
+                      final pageData = await fetchOffset(offset);
+                      if (pageData != null) {
+                        final ref = pageData['refineSearch'];
+                        if (ref is Map) {
+                          final d = ref['data'];
+                          if (d is Map && d['jobs'] is List) {
+                            processJobs(d['jobs'] as List);
+                          }
+                        }
+                      }
+                    }),
+                  );
+                }
+              }
+            }
+          }
+        }
+
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (host.contains('careers.m2pfintech.com') || host.contains('m2pfintech.com')) {
+      try {
+        final uri = Uri.parse('https://lead.m2pfintech.com/api/darwin/careers/job-list');
+        final response = await _client.get(
+          uri,
+          headers: const {
+            'accept': 'application/json, text/plain, */*',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          },
+        ).timeout(const Duration(seconds: 12));
+
+        if (response.statusCode >= 400 || response.body.trim().isEmpty) {
+          return const [];
+        }
+
+        final decoded = jsonDecode(response.body);
+        if (decoded is! Map || decoded['data'] is! List) {
+          return const [];
+        }
+
+        final rows = <ScanResultRow>[];
+        final seen = <String>{};
+        final matchTerms = keywords;
+
+        for (final item in decoded['data'].whereType<Map>()) {
+          final map = item.map((k, v) => MapEntry(k.toString(), v));
+
+          final title = (map['job_title'] ?? '').toString().trim();
+          if (title.isEmpty) continue;
+
+          final locationList = map['location_city'];
+          String location = 'Not specified';
+          if (locationList is List && locationList.isNotEmpty) {
+            location = locationList.map((e) => e?.toString().trim() ?? '').where((e) => e.isNotEmpty).join(', ');
+          } else if (locationList != null && locationList.toString().isNotEmpty) {
+            location = locationList.toString();
+          }
+
+          final dept = (map['department'] ?? '').toString().trim();
+          final parentDept = (map['parent_department'] ?? '').toString().trim();
+          final employeeType = (map['employee_type'] ?? '').toString().trim();
+
+          final jobId = (map['job_id'] ?? '').toString().trim();
+          if (jobId.isEmpty) continue;
+
+          final applyLink = 'https://careers.m2pfintech.com/job-description/$jobId';
+
+          final searchable = [
+            title,
+            dept,
+            parentDept,
+            employeeType,
+            location,
+          ].where((p) => p.trim().isNotEmpty).join(' | ').toLowerCase();
+
+          if (keywords.isNotEmpty) {
+            bool hasKeywordVariant(String kw) {
+              final k = kw.toLowerCase().trim();
+              if (k.isEmpty || k.length < 3) return false;
+              if (searchable.contains(k)) return true;
+              if (k.endsWith('y') && k.length > 1) {
+                final stem = k.substring(0, k.length - 1);
+                if (searchable.contains('${stem}ies')) return true;
+              }
+              if (k.endsWith('e') && k.length > 1) {
+                final stem = k.substring(0, k.length - 1);
+                if (searchable.contains('${k}d') ||
+                    searchable.contains('${stem}ing')) {
+                  return true;
+                }
+              }
+              return searchable.contains('${k}s') ||
+                  searchable.contains('${k}es') ||
+                  searchable.contains('${k}ing') ||
+                  searchable.contains('${k}ed');
+            }
+
+            final titleLower = title.toLowerCase();
+            final exactWordMatch = matchTerms.any((kw) {
+              final pattern = RegExp('\\b${RegExp.escape(kw.toLowerCase())}\\b');
+              return pattern.hasMatch(searchable);
+            });
+            final variantMatch = matchTerms.any(hasKeywordVariant);
+            if (!exactWordMatch &&
+                !variantMatch &&
+                !fuzzyMatch(titleLower, matchTerms) &&
+                !fuzzyMatch(searchable, matchTerms)) {
+              continue;
+            }
+          }
+
+          final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
+          if (seen.contains(key)) continue;
+          seen.add(key);
+
+          rows.add(
+            ScanResultRow(
+              company: companyName,
+              title: title,
+              companyUrl: careerUri.toString(),
+              applyLink: applyLink,
+              location: location.isEmpty ? 'Not specified' : location,
+              duration: employeeType.isEmpty ? '—' : employeeType,
+              deadline: '—',
+              source: 'M2P Careers API',
+              error: '',
+            ),
+          );
+        }
+
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
 
     if (host.contains('accenture.com')) {
       try {
@@ -11623,7 +11940,7 @@ class ScraperService {
         var nextOffset = 0;
         const pageSize = 20;
         var hasMore = true;
-        const workerCount = 40;
+        const workerCount = 80;
 
         Future<void> worker() async {
           while (true) {

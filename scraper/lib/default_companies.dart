@@ -215,6 +215,7 @@ const Map<String, String> defaultCompanyUrls = {
   'samsung':
       'https://sec.wd3.myworkdayjobs.com/en-US/Samsung_Careers?locations=189767dd6c9201b802603c83a5292c78&Location_Country=c4f78be1a8f14da0ab49ce1162348a5e&hiringCompany=189767dd6c9201554f3e5312a7290a85',
   'LG electronics': 'https://globalcareers.lge.com/jobs',
+  'M2P Fintech': 'https://careers.m2pfintech.com/view-jobs/',
   'Locus': 'https://locus.freshteam.com/jobs',
   'HCL Tech': 'https://careers.hcltech.com/go/NonTPDemand/9558355/',
   'Hyperverge': 'https://hyperverge.co/careers/',
@@ -349,4 +350,5 @@ const Map<String, String> defaultCompanyUrls = {
   'Emirates':
       'https://www.emiratesgroupcareers.com/search-and-apply/?jobcategory=Information%20Technology&location=India',
   'Maersk': 'https://www.maersk.com/careers/vacancies',
+  'Mars': 'https://careers.mars.com/in/en/search-results',
 };
