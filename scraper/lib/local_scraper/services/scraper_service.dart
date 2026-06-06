@@ -309,6 +309,7 @@ class ScraperService {
         loweredHost.contains('gauntlet.xyz') ||
         loweredHost.contains('search-careers.gm.com') ||
         loweredHost.contains('bain.com') ||
+        loweredHost.contains('mondelezinternational.com') ||
         loweredHost.contains('darwinbox.in') ||
         loweredHost.contains('capitalonecareers.com') ||
         loweredHost.contains('capgemini.com') ||
@@ -516,6 +517,10 @@ class ScraperService {
 
     if (originalHost.contains('maersk.com')) {
       return Uri.parse('https://maersk.wd3.myworkdayjobs.com/Maersk_Careers');
+    }
+
+    if (originalHost.contains('mondelezinternational.com')) {
+      return Uri.parse('https://mdlz.wd3.myworkdayjobs.com/External');
     }
 
     if (originalHost.contains('mars.com')) {
@@ -2439,6 +2444,74 @@ class ScraperService {
               duration: 'Not specified',
               deadline: '—',
               source: 'Hyperverge HTML',
+              error: '',
+            ),
+          );
+        }
+
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (host.contains('consensys.io')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final seen = <String>{};
+        final matchTerms = keywords;
+
+        final pageHtml = await _fetch(careerUri);
+        if (pageHtml == null || pageHtml.trim().isEmpty) {
+          return const [];
+        }
+
+        final doc = html_parser.parse(pageHtml);
+        final jobCards = doc.querySelectorAll('a.card-job');
+        for (final card in jobCards) {
+          final title = card.querySelector('.job-title')?.text.trim() ?? '';
+          if (title.isEmpty) continue;
+
+          final applyLinkAttr = card.attributes['href']?.trim() ?? '';
+          final applyLink = applyLinkAttr.isNotEmpty
+              ? careerUri.resolve(applyLinkAttr).toString()
+              : careerUri.toString();
+
+          final location =
+              card.querySelector('.job-location')?.text.trim() ?? 'Not specified';
+
+          final searchable = [
+            title,
+            location,
+            applyLink,
+          ].where((part) => part.trim().isNotEmpty).join(' | ').toLowerCase();
+
+          if (matchTerms.isNotEmpty) {
+            final exactWordMatch = matchTerms.any((kw) {
+              final pattern = RegExp(
+                '\\b${RegExp.escape(kw.toLowerCase())}\\b',
+              );
+              return pattern.hasMatch(searchable);
+            });
+            if (!exactWordMatch && !fuzzyMatch(searchable, matchTerms)) {
+              continue;
+            }
+          }
+
+          final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
+          if (seen.contains(key)) continue;
+          seen.add(key);
+
+          rows.add(
+            ScanResultRow(
+              company: companyName,
+              title: title,
+              companyUrl: careerUri.toString(),
+              applyLink: applyLink,
+              location: location.isEmpty ? 'Not specified' : location,
+              duration: 'Not specified',
+              deadline: '—',
+              source: 'Consensys HTML',
               error: '',
             ),
           );
@@ -7187,7 +7260,7 @@ class ScraperService {
             final pattern = RegExp('\\b${RegExp.escape(kw.toLowerCase())}\\b');
             return pattern.hasMatch(titleLower) || pattern.hasMatch(textLower);
           });
-          if (!exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
+          if (matchTerms.isNotEmpty && !exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
             continue;
           }
 

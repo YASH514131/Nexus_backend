@@ -291,8 +291,7 @@ const Map<String, String> defaultCompanyUrls = {
       'https://www.pepsicojobs.com/main/jobs?keywords=Software%20Engineer&locations=Gurugram,Haryana,India%7CHyderabad,Telangana,India&page=1',
   'kraft heinz':
       'https://jobs.kraftheinz.com/careers?start=0&location=GJ%2C+India&pid=1970324837283980&sort_by=distance&filter_include_remote=1',
-  'mondelez international':
-      'https://www.mondelezinternational.com/careers/jobs/?term=&countrycode=IN',
+  'mondelez international': 'https://www.mondelezinternational.com/careers/',
   'mars': 'https://careers.mars.com/in/en/search-results',
   'general mills':
       'https://careers.generalmills.com/careers/jobs?location=India&woe=12&regionCode=IN&stretchUnit=MILES&stretch=25&page=1&limit=100',
@@ -338,6 +337,8 @@ const Map<String, String> defaultCompanyUrls = {
   'Warner bro': 'https://careers.wbd.com/global/en/search-results',
   'comcast': 'https://jobs.comcast.com/search-jobs',
   'cashfree': 'https://www.cashfree.com/careers/',
+  'moneyview':
+      'https://moneyview.darwinbox.in/ms/candidatev2/main/careers/allJobs',
   'AT&T': 'https://www.att.jobs/search-jobs',
   'verizon':
       'https://mycareer.verizon.com/jobs/?search=&country=India&team=Technology',
@@ -350,5 +351,4 @@ const Map<String, String> defaultCompanyUrls = {
   'Emirates':
       'https://www.emiratesgroupcareers.com/search-and-apply/?jobcategory=Information%20Technology&location=India',
   'Maersk': 'https://www.maersk.com/careers/vacancies',
-  'Mars': 'https://careers.mars.com/in/en/search-results',
 };
