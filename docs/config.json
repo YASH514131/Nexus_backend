@@ -1,6 +1,6 @@
 {
-  "version": "2026-06-06T19:16:51Z",
+  "version": "2026-06-07T03:00:47Z",
   "dataset_url": "https://huggingface.co/datasets/Yash514311/nexus-jobs/resolve/main/jobs.zip",
-  "hash": "0b94c111ee83198d8212a0c3e6212928f2ca0c29258ec3fc4d0cfaf1a3a6ab33",
+  "hash": "e0034ed0fe00f0a3e15c54ba790b858cc1238778d53f04fd755376b6920a105e",
   "min_app_version": "3.0.0"
 }
