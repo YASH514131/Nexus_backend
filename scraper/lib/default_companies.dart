@@ -41,6 +41,7 @@ const Map<String, String> defaultCompanyUrls = {
   'Uniswap Labs': 'https://careers.uniswap.org/',
   'dYdX Trading': 'https://dydx.exchange/careers?#roles',
   'MakerDAO (Sky)': 'https://jobs.ashbyhq.com/skyecosystem',
+  'Motive': 'https://gomotive.com/company/careers/jobs/',
   'juspay': 'https://juspay.io/careers',
   'Morpho Labs': 'https://morpho.org/jobs/#jobs-list',
   'Gauntlet': 'https://www.gauntlet.xyz/careers#open-roles',

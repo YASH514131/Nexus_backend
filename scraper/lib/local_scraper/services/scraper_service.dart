@@ -21,8 +21,7 @@ class ScraperService {
       _limiter = RateLimiter(callsPerSecond: callsPerSecond);
 
   static http.Client _createDefaultClient() {
-    final inner = HttpClient()
-      ..maxConnectionsPerHost = 100;
+    final inner = HttpClient()..maxConnectionsPerHost = 100;
     return IOClient(inner);
   }
 
@@ -310,6 +309,8 @@ class ScraperService {
         loweredHost.contains('search-careers.gm.com') ||
         loweredHost.contains('bain.com') ||
         loweredHost.contains('mondelezinternational.com') ||
+        loweredHost.contains('morpho.org') ||
+        loweredHost.contains('gomotive.com') ||
         loweredHost.contains('darwinbox.in') ||
         loweredHost.contains('capitalonecareers.com') ||
         loweredHost.contains('capgemini.com') ||
@@ -515,6 +516,14 @@ class ScraperService {
     final discoveredHost = discoveredUri.host.toLowerCase();
     final originalHost = originalUri.host.toLowerCase();
 
+    if (originalHost.contains('morpho.org')) {
+      return Uri.parse('https://jobs.ashbyhq.com/morpho');
+    }
+
+    if (originalHost.contains('gomotive.com')) {
+      return Uri.parse('https://boards.greenhouse.io/gomotive');
+    }
+
     if (originalHost.contains('maersk.com')) {
       return Uri.parse('https://maersk.wd3.myworkdayjobs.com/Maersk_Careers');
     }
@@ -662,37 +671,50 @@ class ScraperService {
           final widgetHost = careerUri.host;
           final uri = Uri.https(widgetHost, '/widgets');
           try {
-            final response = await _client.post(
-              uri,
-              headers: const {
-                'Content-Type': 'application/json',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-              },
-              body: jsonEncode({
-                "lang": "",
-                "deviceType": "desktop",
-                "country": "",
-                "pageName": "search-results",
-                "ddoKey": "refineSearch",
-                "sortBy": "",
-                "subsearch": "",
-                "from": offset,
-                "jobs": true,
-                "counts": true,
-                "all_fields": ["remote", "country", "state", "city", "experienceLevel", "category", "profession", "employmentType", "jobLevel"],
-                "pageType": "search-results",
-                "size": pageSize,
-                "clearAll": false,
-                "jdsource": "facets",
-                "isSliderEnable": false,
-                "pageId": "page1",
-                "siteType": "external",
-                "keywords": "",
-                "global": true,
-                "selected_fields": {},
-                "locationData": {}
-              }),
-            ).timeout(const Duration(seconds: 15));
+            final response = await _client
+                .post(
+                  uri,
+                  headers: const {
+                    'Content-Type': 'application/json',
+                    'User-Agent':
+                        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                  },
+                  body: jsonEncode({
+                    "lang": "",
+                    "deviceType": "desktop",
+                    "country": "",
+                    "pageName": "search-results",
+                    "ddoKey": "refineSearch",
+                    "sortBy": "",
+                    "subsearch": "",
+                    "from": offset,
+                    "jobs": true,
+                    "counts": true,
+                    "all_fields": [
+                      "remote",
+                      "country",
+                      "state",
+                      "city",
+                      "experienceLevel",
+                      "category",
+                      "profession",
+                      "employmentType",
+                      "jobLevel",
+                    ],
+                    "pageType": "search-results",
+                    "size": pageSize,
+                    "clearAll": false,
+                    "jdsource": "facets",
+                    "isSliderEnable": false,
+                    "pageId": "page1",
+                    "siteType": "external",
+                    "keywords": "",
+                    "global": true,
+                    "selected_fields": {},
+                    "locationData": {},
+                  }),
+                )
+                .timeout(const Duration(seconds: 15));
 
             if (response.statusCode == 200) {
               return jsonDecode(response.body);
@@ -750,7 +772,9 @@ class ScraperService {
 
               final titleLower = title.toLowerCase();
               final exactWordMatch = matchTerms.any((kw) {
-                final pattern = RegExp('\\b${RegExp.escape(kw.toLowerCase())}\\b');
+                final pattern = RegExp(
+                  '\\b${RegExp.escape(kw.toLowerCase())}\\b',
+                );
                 return pattern.hasMatch(searchable);
               });
               final variantMatch = matchTerms.any(hasKeywordVariant);
@@ -794,15 +818,20 @@ class ScraperService {
 
               if (totalHits > pageSize) {
                 final totalPages = (totalHits / pageSize).ceil();
-                final offsets = List.generate(totalPages - 1, (i) => (i + 1) * pageSize);
-                
+                final offsets = List.generate(
+                  totalPages - 1,
+                  (i) => (i + 1) * pageSize,
+                );
+
                 const batchSize = 10;
                 for (var i = 0; i < offsets.length; i += batchSize) {
                   final chunk = offsets.sublist(
                     i,
-                    i + batchSize > offsets.length ? offsets.length : i + batchSize,
+                    i + batchSize > offsets.length
+                        ? offsets.length
+                        : i + batchSize,
                   );
-                  
+
                   await Future.wait(
                     chunk.map((offset) async {
                       final pageData = await fetchOffset(offset);
@@ -829,16 +858,22 @@ class ScraperService {
       }
     }
 
-    if (host.contains('careers.m2pfintech.com') || host.contains('m2pfintech.com')) {
+    if (host.contains('careers.m2pfintech.com') ||
+        host.contains('m2pfintech.com')) {
       try {
-        final uri = Uri.parse('https://lead.m2pfintech.com/api/darwin/careers/job-list');
-        final response = await _client.get(
-          uri,
-          headers: const {
-            'accept': 'application/json, text/plain, */*',
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-          },
-        ).timeout(const Duration(seconds: 12));
+        final uri = Uri.parse(
+          'https://lead.m2pfintech.com/api/darwin/careers/job-list',
+        );
+        final response = await _client
+            .get(
+              uri,
+              headers: const {
+                'accept': 'application/json, text/plain, */*',
+                'user-agent':
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+              },
+            )
+            .timeout(const Duration(seconds: 12));
 
         if (response.statusCode >= 400 || response.body.trim().isEmpty) {
           return const [];
@@ -862,8 +897,12 @@ class ScraperService {
           final locationList = map['location_city'];
           String location = 'Not specified';
           if (locationList is List && locationList.isNotEmpty) {
-            location = locationList.map((e) => e?.toString().trim() ?? '').where((e) => e.isNotEmpty).join(', ');
-          } else if (locationList != null && locationList.toString().isNotEmpty) {
+            location = locationList
+                .map((e) => e?.toString().trim() ?? '')
+                .where((e) => e.isNotEmpty)
+                .join(', ');
+          } else if (locationList != null &&
+              locationList.toString().isNotEmpty) {
             location = locationList.toString();
           }
 
@@ -874,7 +913,8 @@ class ScraperService {
           final jobId = (map['job_id'] ?? '').toString().trim();
           if (jobId.isEmpty) continue;
 
-          final applyLink = 'https://careers.m2pfintech.com/job-description/$jobId';
+          final applyLink =
+              'https://careers.m2pfintech.com/job-description/$jobId';
 
           final searchable = [
             title,
@@ -908,7 +948,9 @@ class ScraperService {
 
             final titleLower = title.toLowerCase();
             final exactWordMatch = matchTerms.any((kw) {
-              final pattern = RegExp('\\b${RegExp.escape(kw.toLowerCase())}\\b');
+              final pattern = RegExp(
+                '\\b${RegExp.escape(kw.toLowerCase())}\\b',
+              );
               return pattern.hasMatch(searchable);
             });
             final variantMatch = matchTerms.any(hasKeywordVariant);
@@ -2478,7 +2520,8 @@ class ScraperService {
               : careerUri.toString();
 
           final location =
-              card.querySelector('.job-location')?.text.trim() ?? 'Not specified';
+              card.querySelector('.job-location')?.text.trim() ??
+              'Not specified';
 
           final searchable = [
             title,
@@ -7260,7 +7303,7 @@ class ScraperService {
             final pattern = RegExp('\\b${RegExp.escape(kw.toLowerCase())}\\b');
             return pattern.hasMatch(titleLower) || pattern.hasMatch(textLower);
           });
-          if (matchTerms.isNotEmpty && !exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
+          if (!exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
             continue;
           }
 
@@ -10143,7 +10186,9 @@ class ScraperService {
               final recordsPerPageAttr = section
                   ?.attributes['data-records-per-page']
                   ?.trim();
-              final parsedRecordsPerPage = int.tryParse(recordsPerPageAttr ?? '');
+              final parsedRecordsPerPage = int.tryParse(
+                recordsPerPageAttr ?? '',
+              );
               if (parsedRecordsPerPage != null && parsedRecordsPerPage > 0) {
                 recordsPerPage = parsedRecordsPerPage;
               }
@@ -10749,7 +10794,8 @@ class ScraperService {
                   uri,
                   headers: const {
                     'accept': 'application/json, text/plain, */*',
-                    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'user-agent':
+                        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                   },
                 )
                 .timeout(const Duration(seconds: 12));
@@ -10828,7 +10874,9 @@ class ScraperService {
                   company: companyName,
                   title: title,
                   companyUrl: careerUri.toString(),
-                  applyLink: applyLink.isEmpty ? careerUri.toString() : applyLink,
+                  applyLink: applyLink.isEmpty
+                      ? careerUri.toString()
+                      : applyLink,
                   location: location.isEmpty ? 'Not specified' : location,
                   duration: durationData.$1,
                   deadline: '—',
@@ -11173,7 +11221,6 @@ class ScraperService {
             break;
           }
         }
-
       } catch (_) {
         return const [];
       }
@@ -11262,7 +11309,7 @@ class ScraperService {
             final corpVal = (item['corpNm'] ?? item['corpCd'] ?? '')
                 .toString()
                 .trim();
-            
+
             final locParts = <String>[];
             if (locationVal.isNotEmpty) locParts.add(locationVal);
             if (countryVal.isNotEmpty) locParts.add(countryVal);
@@ -11954,7 +12001,9 @@ class ScraperService {
         }
 
         final doc = html_parser.parse(html);
-        final jobElements = doc.querySelectorAll('a[data-portal-title], .job-list a[href*="/jobs/"]');
+        final jobElements = doc.querySelectorAll(
+          'a[data-portal-title], .job-list a[href*="/jobs/"]',
+        );
 
         final seen = <String>{};
         for (final element in jobElements) {
@@ -11965,20 +12014,30 @@ class ScraperService {
           final href = element.attributes['href']?.trim() ?? '';
           if (href.isEmpty) continue;
           final applyLink = careerUri.resolve(href).toString();
-          
+
           final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
           if (seen.contains(key)) continue;
           seen.add(key);
 
-          final locationText = element.querySelector('.location-info')?.text.trim() ?? 'Not specified';
+          final locationText =
+              element.querySelector('.location-info')?.text.trim() ??
+              'Not specified';
           final locationParts = locationText
               .split('\n')
               .map((s) => s.trim())
-              .where((s) => s.isNotEmpty && s.toLowerCase() != 'full time' && s.toLowerCase() != 'part time')
+              .where(
+                (s) =>
+                    s.isNotEmpty &&
+                    s.toLowerCase() != 'full time' &&
+                    s.toLowerCase() != 'part time',
+              )
               .toList();
-          final location = locationParts.isEmpty ? 'Not specified' : locationParts.join(', ');
+          final location = locationParts.isEmpty
+              ? 'Not specified'
+              : locationParts.join(', ');
 
-          final description = element.querySelector('.job-desc')?.text.trim() ?? '';
+          final description =
+              element.querySelector('.job-desc')?.text.trim() ?? '';
           final durationData = parseDuration(description);
 
           rows.add(
@@ -12029,19 +12088,27 @@ class ScraperService {
 
             if (currentOffset == -1) break;
 
-            final pageUri = Uri.parse('https://careers.loreal.com/en_US/jobs/SearchJobsAjax?offset=$currentOffset');
+            final pageUri = Uri.parse(
+              'https://careers.loreal.com/en_US/jobs/SearchJobsAjax?offset=$currentOffset',
+            );
             try {
-              final response = await _client.get(
-                pageUri,
-                headers: {
-                  'User-Agent': userAgents[DateTime.now().millisecond % userAgents.length],
-                  'Accept-Language': 'en-US,en;q=0.9',
-                  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                  'DNT': '1',
-                },
-              ).timeout(const Duration(seconds: 10));
+              final response = await _client
+                  .get(
+                    pageUri,
+                    headers: {
+                      'User-Agent':
+                          userAgents[DateTime.now().millisecond %
+                              userAgents.length],
+                      'Accept-Language': 'en-US,en;q=0.9',
+                      'Accept':
+                          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                      'DNT': '1',
+                    },
+                  )
+                  .timeout(const Duration(seconds: 10));
 
-              if (response.statusCode != 200 || response.body.contains('No jobs found')) {
+              if (response.statusCode != 200 ||
+                  response.body.contains('No jobs found')) {
                 synchronizedAction(() {
                   hasMore = false;
                 });
@@ -12059,14 +12126,19 @@ class ScraperService {
 
               final pageRows = <ScanResultRow>[];
               for (final container in containers) {
-                final link = container.querySelector('a[href*="/jobs/JobDetail/"]');
+                final link = container.querySelector(
+                  'a[href*="/jobs/JobDetail/"]',
+                );
                 if (link == null) continue;
                 final title = link.text.trim();
-                if (title.isEmpty || title.toLowerCase() == 'apply now') continue;
+                if (title.isEmpty || title.toLowerCase() == 'apply now')
+                  continue;
 
                 final applyLink = link.attributes['href']?.trim() ?? '';
 
-                final spans = container.querySelectorAll('.article__header__text__subtitle span');
+                final spans = container.querySelectorAll(
+                  '.article__header__text__subtitle span',
+                );
                 String location = 'Not specified';
                 String duration = '—';
                 if (spans.isNotEmpty) {
@@ -12095,7 +12167,8 @@ class ScraperService {
 
               synchronizedAction(() {
                 for (final row in pageRows) {
-                  final key = '${row.title.toLowerCase()}|${row.applyLink.toLowerCase()}';
+                  final key =
+                      '${row.title.toLowerCase()}|${row.applyLink.toLowerCase()}';
                   if (!seen.contains(key)) {
                     seen.add(key);
                     rows.add(row);
