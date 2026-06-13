@@ -148,7 +148,8 @@ jobs:
             "version": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'",
             "dataset_url": "https://huggingface.co/datasets/Yash514311/nexus-jobs/resolve/main/jobs.zip",
             "hash": "'$HASH'",
-            "min_app_version": "3.0.0"
+            "min_app_version": "3.0.0",
+            "new_job_count": '${NEW_JOB_COUNT:-0}'
           }' > docs/config.json
 
       - name: Push config.json to GitHub Pages

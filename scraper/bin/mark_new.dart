@@ -54,6 +54,19 @@ void main(List<String> args) {
     '${current.length - newCount} seen '
     '(previous dataset: ${previous?.length ?? 0} jobs).',
   );
+
+  final githubEnvPath = Platform.environment['GITHUB_ENV'];
+  if (githubEnvPath != null) {
+    try {
+      File(githubEnvPath).writeAsStringSync(
+        'NEW_JOB_COUNT=$newCount\n',
+        mode: FileMode.append,
+      );
+      stdout.writeln('Exported NEW_JOB_COUNT=$newCount to GITHUB_ENV');
+    } catch (e) {
+      stderr.writeln('Failed to write to GITHUB_ENV: $e');
+    }
+  }
 }
 
 List<Map<String, dynamic>>? _readJobs(String path) {
