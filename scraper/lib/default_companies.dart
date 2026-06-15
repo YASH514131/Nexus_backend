@@ -176,6 +176,7 @@ const Map<String, String> defaultCompanyUrls = {
   '21Shares': 'https://job-boards.greenhouse.io/21shares',
   'Safe (Gnosis)': 'https://safe.global/',
   'Finoa': 'https://finoa.jobs.personio.com/',
+  'Navan': 'https://navan.com/careers/openings',
   'Argent': 'https://job-boards.eu.greenhouse.io/ready',
   'Monzo': 'https://monzo.com/careers#jobs',
   'HashKey Group': 'https://group.hashkey.com/job',
@@ -285,8 +286,7 @@ const Map<String, String> defaultCompanyUrls = {
   'P&G': 'https://www.pgcareers.com/in/en/search-results?m=3',
   'uniliver':
       'https://careers.unilever.com/en/search-jobs/India/34155/2/1269750/22/79/100/2',
-  'nestle':
-      'https://www.nestle.com/jobs/search-jobs?keyword=&country=IN&location=&career_area=All',
+  'nestle': 'https://www.nestle.com/jobs/search-jobs',
   'coca-cola': 'https://careers.coca-colacompany.com/?store_id=India',
   'pepsi':
       'https://www.pepsicojobs.com/main/jobs?keywords=Software%20Engineer&locations=Gurugram,Haryana,India%7CHyderabad,Telangana,India&page=1',

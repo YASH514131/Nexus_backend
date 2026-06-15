@@ -142,7 +142,10 @@ class ScraperService {
         careerHost.contains('m2pfintech.com') ||
         careerHost.contains('maersk.com') ||
         careerHost.contains('mars.com') ||
-        careerHost.contains('mastercard.com')) {
+        careerHost.contains('mastercard.com') ||
+        careerHost.contains('navan.com') ||
+        careerHost.contains('nestle.com') ||
+        careerHost.contains('near.foundation')) {
       final apiRows = await _fetchKnownJsonApiRows(
         companyName: company.name,
         careerUri: knownApiSeedUri,
@@ -409,6 +412,9 @@ class ScraperService {
         loweredHost.contains('maersk.com') ||
         loweredHost.contains('mars.com') ||
         loweredHost.contains('mastercard.com') ||
+        loweredHost.contains('navan.com') ||
+        loweredHost.contains('nestle.com') ||
+        loweredHost.contains('near.foundation') ||
         loweredHost.contains('careers.amgen.com');
   }
 
@@ -518,6 +524,18 @@ class ScraperService {
 
     if (originalHost.contains('morpho.org')) {
       return Uri.parse('https://jobs.ashbyhq.com/morpho');
+    }
+
+    if (originalHost.contains('navan.com')) {
+      return Uri.parse('https://boards.greenhouse.io/tripactions');
+    }
+
+    if (originalHost.contains('near.foundation')) {
+      return Uri.parse('https://boards.greenhouse.io/nearfoundation');
+    }
+
+    if (originalHost.contains('nestle.com')) {
+      return Uri.parse('https://jobdetails.nestle.com/sitemap.xml');
     }
 
     if (originalHost.contains('gomotive.com')) {
@@ -656,6 +674,95 @@ class ScraperService {
     required List<String> keywords,
   }) async {
     final host = careerUri.host.toLowerCase();
+
+    if (host.contains('nestle.com')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final seen = <String>{};
+
+        final response = await _client.get(
+          careerUri,
+          headers: {
+            'User-Agent': userAgents[DateTime.now().millisecond % userAgents.length],
+            'Accept': 'application/xml,text/xml,*/*',
+            'Accept-Language': 'en-US,en;q=0.9',
+          },
+        ).timeout(const Duration(seconds: 15));
+
+        if (response.statusCode != 200 || response.body.trim().isEmpty) {
+          return const [];
+        }
+
+        final doc = html_parser.parse(response.body);
+        final locs = doc.querySelectorAll('url loc').map((el) => el.text.trim()).where((t) => t.isNotEmpty).toList();
+
+        String decodeComponentRobust(String s) {
+          try {
+            return Uri.decodeComponent(s);
+          } catch (_) {
+            try {
+              return Uri.decodeFull(s);
+            } catch (_) {
+              return s.replaceAll('%28', '(').replaceAll('%29', ')').replaceAll('%20', ' ');
+            }
+          }
+        }
+
+        String cleanTitle(String title) {
+          var t = title.trim();
+          final trailingPattern = RegExp(r'\s+(?:[A-Z]{2,3}\b\s+)?(?:\d+[\s\d-]*)$');
+          t = t.replaceFirst(trailingPattern, '').trim();
+
+          t = t.replaceAll(RegExp(r'\s*\(mwd\)\s*$', caseSensitive: false), ' (m/w/d)');
+          t = t.replaceAll(RegExp(r'\s*\(hf\)\s*$', caseSensitive: false), ' (h/f)');
+          t = t.replaceAll(RegExp(r'\s*\(mwd\)-\s*$', caseSensitive: false), ' (m/w/d)');
+          t = t.replaceAll(RegExp(r'\s*\(m\/w\/d\)\s*$', caseSensitive: false), ' (m/w/d)');
+          return t;
+        }
+
+        for (final u in locs) {
+          try {
+            final uri = Uri.parse(u);
+            final segments = uri.pathSegments.where((s) => s.isNotEmpty).toList();
+            if (segments.length >= 3 && segments[0] == 'job') {
+              final jobInfo = segments[1];
+              final firstHyphen = jobInfo.indexOf('-');
+              if (firstHyphen != -1) {
+                final locationRaw = jobInfo.substring(0, firstHyphen);
+                final titleRaw = jobInfo.substring(firstHyphen + 1);
+
+                final location = decodeComponentRobust(locationRaw).replaceAll('-', ' ').trim();
+                final title = cleanTitle(decodeComponentRobust(titleRaw).replaceAll('-', ' ').trim());
+
+                if (title.isNotEmpty) {
+                  final key = '${title.toLowerCase()}|${u.toLowerCase()}';
+                  if (!seen.contains(key)) {
+                    seen.add(key);
+                    rows.add(
+                      ScanResultRow(
+                        company: companyName,
+                        title: title,
+                        companyUrl: 'https://www.nestle.com/jobs/search-jobs',
+                        applyLink: u,
+                        location: location.isEmpty ? 'Not specified' : location,
+                        duration: '—',
+                        deadline: '—',
+                        source: 'Nestle Careers Sitemap',
+                        error: '',
+                      ),
+                    );
+                  }
+                }
+              }
+            }
+          } catch (_) {}
+        }
+
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
 
     if (host.contains('careers.mars.com') ||
         host.contains('mars.com') ||
@@ -12131,8 +12238,9 @@ class ScraperService {
                 );
                 if (link == null) continue;
                 final title = link.text.trim();
-                if (title.isEmpty || title.toLowerCase() == 'apply now')
+                if (title.isEmpty || title.toLowerCase() == 'apply now') {
                   continue;
+                }
 
                 final applyLink = link.attributes['href']?.trim() ?? '';
 
