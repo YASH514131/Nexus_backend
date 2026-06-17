@@ -268,8 +268,7 @@ const Map<String, String> defaultCompanyUrls = {
   'Johnson johnson': 'https://www.careers.jnj.com/en/',
   'pfizer':
       'https://www.pfizer.com/about/careers/search-results?langcode=en&count=10&sort=latest',
-  'Novartis':
-      'https://www.novartis.com/careers/career-search?search_api_fulltext=&country%5B%5D=LOC_IN&field_job_posted_date=All&op=Submit',
+  'Novartis': 'https://www.novartis.com/careers/career-search',
   'roche': 'https://careers.roche.com/global/en/c/information-technology-jobs',
   'sanofi': 'https://jobs.sanofi.com/en/search-jobs',
   'GSK': 'https://jobs.gsk.com/en-gb/jobs',
@@ -352,4 +351,6 @@ const Map<String, String> defaultCompanyUrls = {
   'Emirates':
       'https://www.emiratesgroupcareers.com/search-and-apply/?jobcategory=Information%20Technology&location=India',
   'Maersk': 'https://www.maersk.com/careers/vacancies',
+  'Netflix': 'https://explore.jobs.netflix.net/careers',
+  'Niramai': 'https://niramai.com/careers/',
 };

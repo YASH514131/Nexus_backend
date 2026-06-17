@@ -145,6 +145,10 @@ class ScraperService {
         careerHost.contains('mastercard.com') ||
         careerHost.contains('navan.com') ||
         careerHost.contains('nestle.com') ||
+        careerHost.contains('novartis.com') ||
+        careerHost.contains('nvidia.com') ||
+        careerHost.contains('niramai.com') ||
+        careerHost.contains('gem.com') ||
         careerHost.contains('near.foundation')) {
       final apiRows = await _fetchKnownJsonApiRows(
         companyName: company.name,
@@ -307,7 +311,11 @@ class ScraperService {
   }
 
   bool _isPrioritizedKnownApi(String loweredHost) {
-    return loweredHost.contains('awign.com') ||
+    return loweredHost.contains('gem.com') ||
+        loweredHost.contains('niramai.com') ||
+        loweredHost.contains('nvidia.com') ||
+        loweredHost.contains('novartis.com') ||
+        loweredHost.contains('awign.com') ||
         loweredHost.contains('gauntlet.xyz') ||
         loweredHost.contains('search-careers.gm.com') ||
         loweredHost.contains('bain.com') ||
@@ -415,6 +423,8 @@ class ScraperService {
         loweredHost.contains('navan.com') ||
         loweredHost.contains('nestle.com') ||
         loweredHost.contains('near.foundation') ||
+        loweredHost.contains('explore.jobs.netflix.net') ||
+        loweredHost.contains('netflix.com') ||
         loweredHost.contains('careers.amgen.com');
   }
 
@@ -538,6 +548,12 @@ class ScraperService {
       return Uri.parse('https://jobdetails.nestle.com/sitemap.xml');
     }
 
+    if (originalHost.contains('explore.jobs.netflix.net') ||
+        originalHost.contains('netflix.com') ||
+        originalHost.contains('jobs.netflix.net')) {
+      return Uri.parse('https://explore.jobs.netflix.net/api/apply/v2/jobs?domain=netflix.com&start=0&num=10');
+    }
+
     if (originalHost.contains('gomotive.com')) {
       return Uri.parse('https://boards.greenhouse.io/gomotive');
     }
@@ -641,6 +657,24 @@ class ScraperService {
       }
     }
 
+    if (discoveredHost.contains('gem.com') &&
+        originalHost.contains('gem.com')) {
+      final discoveredPath = discoveredUri.path.toLowerCase();
+      final originalSegments = originalUri.pathSegments
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+      if ((discoveredPath == '/careers' ||
+              discoveredPath == '/jobs' ||
+              discoveredPath == '/' ||
+              discoveredPath.isEmpty) &&
+          originalSegments.isNotEmpty &&
+          originalSegments.first.toLowerCase() != 'careers' &&
+          originalSegments.first.toLowerCase() != 'jobs') {
+        return originalUri;
+      }
+    }
+
     if (discoveredHost.contains('greenhouse.io') &&
         originalHost.contains('greenhouse.io')) {
       final discoveredSegments = discoveredUri.pathSegments
@@ -674,6 +708,400 @@ class ScraperService {
     required List<String> keywords,
   }) async {
     final host = careerUri.host.toLowerCase();
+
+    if (host.contains('explore.jobs.netflix.net') ||
+        host.contains('netflix.com') ||
+        host.contains('jobs.netflix.net')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final seen = <String>{};
+        const pageSize = 10;
+        int start = 0;
+        int totalCount = 0;
+
+        Future<Map<String, dynamic>?> fetchPage(int offset) async {
+          final uri = Uri.parse(
+            'https://explore.jobs.netflix.net/api/apply/v2/jobs'
+            '?domain=netflix.com&start=$offset&num=10',
+          );
+          try {
+            final resp = await _client.get(
+              uri,
+              headers: {
+                'User-Agent': userAgents[DateTime.now().millisecond % userAgents.length],
+                'Accept': 'application/json, */*',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Referer': 'https://explore.jobs.netflix.net/careers',
+              },
+            ).timeout(const Duration(seconds: 20));
+            if (resp.statusCode != 200) return null;
+            return jsonDecode(resp.body) as Map<String, dynamic>?;
+          } catch (_) {
+            return null;
+          }
+        }
+
+        // First page – also gets total count
+        final firstPage = await fetchPage(start);
+        if (firstPage == null) return const [];
+
+        totalCount = (firstPage['count'] as num?)?.toInt() ?? 0;
+        final positions = (firstPage['positions'] as List<dynamic>?) ?? [];
+
+        void parsePositions(List<dynamic> positionList) {
+          for (final pos in positionList) {
+            if (pos is! Map<String, dynamic>) continue;
+            final title = (pos['name'] as String? ?? '').trim();
+            if (title.isEmpty) continue;
+            final location = (pos['location'] as String? ?? '').trim();
+            final applyLink = (pos['canonicalPositionUrl'] as String? ??
+                'https://explore.jobs.netflix.net/careers/job/${pos['id']}').trim();
+            final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
+            if (!seen.contains(key)) {
+              seen.add(key);
+              rows.add(ScanResultRow(
+                company: companyName,
+                title: title,
+                companyUrl: 'https://explore.jobs.netflix.net/careers',
+                applyLink: applyLink,
+                location: location.isEmpty ? 'Not specified' : location,
+                duration: '—',
+                deadline: '—',
+                source: 'Netflix Careers (Eightfold API)',
+                error: '',
+              ));
+            }
+          }
+        }
+
+        parsePositions(positions);
+        start += pageSize;
+
+        // Paginate until all jobs are fetched
+        while (start < totalCount) {
+          await _limiter.wait(host);
+          final page = await fetchPage(start);
+          if (page == null) break;
+          final pagePositions = (page['positions'] as List<dynamic>?) ?? [];
+          if (pagePositions.isEmpty) break;
+          parsePositions(pagePositions);
+          start += pageSize;
+        }
+
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (host.contains('gem.com')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final boardId = careerUri.pathSegments.firstWhere((s) => s.isNotEmpty, orElse: () => '');
+        if (boardId.isEmpty) return const [];
+
+        final body = jsonEncode([
+          {
+            'operationName': 'JobBoardList',
+            'variables': {
+              'boardId': boardId,
+            },
+            'query': 'query JobBoardList(\$boardId: String!) { oatsExternalJobPostings(boardId: \$boardId) { jobPostings { id extId title locations { id name city isoCountry isRemote } } } }',
+          }
+        ]);
+
+        final response = await _client.post(
+          Uri.parse('https://jobs.gem.com/api/public/graphql/batch'),
+          headers: {
+            'User-Agent': userAgents[DateTime.now().millisecond % userAgents.length],
+            'Content-Type': 'application/json',
+            'batch': 'true',
+          },
+          body: body,
+        ).timeout(const Duration(seconds: 15));
+
+        if (response.statusCode != 200 || response.body.trim().isEmpty) {
+          return const [];
+        }
+
+        final resList = jsonDecode(response.body) as List<dynamic>;
+        if (resList.isEmpty) return const [];
+        final firstRes = resList[0] as Map<String, dynamic>;
+        final data = firstRes['data'] as Map<String, dynamic>;
+        final oats = data['oatsExternalJobPostings'] as Map<String, dynamic>;
+        final jobPostings = oats['jobPostings'] as List<dynamic>? ?? [];
+
+        for (final job in jobPostings) {
+          if (job is! Map<String, dynamic>) continue;
+          final title = (job['title'] as String? ?? '').trim();
+          final id = (job['id'] as String? ?? '').trim();
+          if (title.isEmpty || id.isEmpty) continue;
+
+          final applyLink = 'https://jobs.gem.com/$boardId/$id';
+          final locs = job['locations'] as List<dynamic>? ?? [];
+          var location = 'See listing';
+          if (locs.isNotEmpty) {
+            final loc = locs[0] as Map<String, dynamic>;
+            location = (loc['name'] as String? ?? 'See listing').trim();
+          }
+
+          rows.add(ScanResultRow(
+            company: companyName,
+            title: title,
+            companyUrl: careerUri.toString(),
+            applyLink: applyLink,
+            location: location,
+            duration: '—',
+            deadline: '—',
+            source: 'Gem Job Board (GraphQL API)',
+            error: '',
+          ));
+        }
+
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (host.contains('niramai.com')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final response = await _client.get(
+          Uri.parse('https://niramai.com/wp-json/wp/v2/jobpost'),
+          headers: {
+            'User-Agent': userAgents[DateTime.now().millisecond % userAgents.length],
+          },
+        ).timeout(const Duration(seconds: 15));
+
+        if (response.statusCode != 200 || response.body.trim().isEmpty) {
+          return const [];
+        }
+
+        final data = jsonDecode(response.body) as List<dynamic>;
+        for (final item in data) {
+          if (item is! Map<String, dynamic>) continue;
+          
+          final titleObj = item['title'] as Map<String, dynamic>?;
+          var title = (titleObj?['rendered'] as String? ?? '').trim();
+          title = title.replaceAll('&#8211;', '–').replaceAll('&amp;', '&');
+          
+          final applyLink = (item['link'] as String? ?? '').trim();
+          if (title.isEmpty || applyLink.isEmpty) continue;
+
+          final contentObj = item['content'] as Map<String, dynamic>?;
+          final contentStr = contentObj?['rendered'] as String? ?? '';
+          var location = 'See listing';
+          final locMatch = RegExp(r'Location:\s*([^\n<]+)', caseSensitive: false).firstMatch(contentStr);
+          if (locMatch != null) {
+            location = locMatch.group(1)!.trim();
+            location = location.replaceAll(RegExp(r'<[^>]*>'), '').trim();
+          }
+
+          rows.add(ScanResultRow(
+            company: companyName,
+            title: title,
+            companyUrl: 'https://niramai.com/careers/',
+            applyLink: applyLink,
+            location: location,
+            duration: '—',
+            deadline: '—',
+            source: 'Niramai Careers (WP API)',
+            error: '',
+          ));
+        }
+
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (host.contains('nvidia.com')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final seen = <String>{};
+
+        final headers = {
+          'User-Agent': userAgents[DateTime.now().millisecond % userAgents.length],
+          'Accept': 'application/json, text/plain, */*',
+          'Content-Type': 'application/json',
+        };
+
+        final firstPageBody = jsonEncode({
+          'appliedFacets': {},
+          'limit': 20,
+          'offset': 0,
+          'searchText': '',
+        });
+
+        final firstPageResp = await _client.post(
+          Uri.parse('https://nvidia.wd5.myworkdayjobs.com/wday/cxs/nvidia/NVIDIAExternalCareerSite/jobs'),
+          headers: headers,
+          body: firstPageBody,
+        );
+
+        if (firstPageResp.statusCode != 200) {
+          return const [];
+        }
+
+        final firstPageData = jsonDecode(firstPageResp.body) as Map<String, dynamic>;
+        final facets = firstPageData['facets'] as List<dynamic>? ?? [];
+        final jobFamilyGroupFacet = facets.firstWhere(
+          (f) => f is Map<String, dynamic> && f['facetParameter'] == 'jobFamilyGroup',
+          orElse: () => null,
+        );
+
+        void addJob(Map<String, dynamic> job) {
+          final title = (job['title'] as String? ?? '').trim();
+          final externalPath = (job['externalPath'] as String? ?? '').trim();
+          if (title.isEmpty || externalPath.isEmpty) return;
+
+          final applyLink = 'https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite$externalPath';
+          final location = (job['locationsText'] as String? ?? 'See listing').trim();
+
+          if (!seen.contains(applyLink)) {
+            seen.add(applyLink);
+            rows.add(ScanResultRow(
+              company: companyName,
+              title: title,
+              companyUrl: 'https://jobs.nvidia.com/careers',
+              applyLink: applyLink,
+              location: location,
+              duration: '—',
+              deadline: '—',
+              source: 'NVIDIA Careers (Workday API)',
+              error: '',
+            ));
+          }
+        }
+
+        final firstPageJobs = firstPageData['jobPostings'] as List<dynamic>? ?? [];
+        for (final job in firstPageJobs) {
+          if (job is Map<String, dynamic>) {
+            addJob(job);
+          }
+        }
+
+        final facetTasks = <({String id, int offset})>[];
+        if (jobFamilyGroupFacet != null) {
+          final values = jobFamilyGroupFacet['values'] as List<dynamic>? ?? [];
+          for (final val in values) {
+            if (val is Map<String, dynamic>) {
+              final id = val['id'] as String?;
+              final count = val['count'] as int? ?? 0;
+              if (id != null && count > 0) {
+                for (int offset = 0; offset < count; offset += 20) {
+                  facetTasks.add((id: id, offset: offset));
+                }
+              }
+            }
+          }
+        }
+
+        // Run concurrently with a workers pool
+        final concurrency = 15;
+        final queue = List<({String id, int offset})>.from(facetTasks);
+
+        Future<void> worker() async {
+          while (queue.isNotEmpty) {
+            final task = queue.removeLast();
+            final body = jsonEncode({
+              'appliedFacets': {
+                'jobFamilyGroup': [task.id],
+              },
+              'limit': 20,
+              'offset': task.offset,
+              'searchText': '',
+            });
+
+            try {
+              final resp = await _client.post(
+                Uri.parse('https://nvidia.wd5.myworkdayjobs.com/wday/cxs/nvidia/NVIDIAExternalCareerSite/jobs'),
+                headers: headers,
+                body: body,
+              );
+
+              if (resp.statusCode == 200) {
+                final data = jsonDecode(resp.body) as Map<String, dynamic>;
+                final jobPostings = data['jobPostings'] as List<dynamic>? ?? [];
+                for (final job in jobPostings) {
+                  if (job is Map<String, dynamic>) {
+                    addJob(job);
+                  }
+                }
+              }
+            } catch (_) {}
+          }
+        }
+
+        await Future.wait(List.generate(concurrency, (_) => worker()));
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (host.contains('novartis.com')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final seen = <String>{};
+
+        final response = await _client.get(
+          Uri.parse('https://www.novartis.com/sitemap.xml'),
+          headers: {
+            'User-Agent': userAgents[DateTime.now().millisecond % userAgents.length],
+            'Accept': 'application/xml,text/xml,*/*',
+          },
+        ).timeout(const Duration(seconds: 30));
+
+        if (response.statusCode != 200 || response.body.trim().isEmpty) {
+          return const [];
+        }
+
+        final jobUrlRegex = RegExp(
+          r'<loc>(https://www\.novartis\.com/careers/career-search/job/details/[^<]+)</loc>',
+        );
+
+        final matches = jobUrlRegex.allMatches(response.body);
+
+        for (final m in matches) {
+          final url = m.group(1)!.trim();
+          if (!seen.contains(url)) {
+            seen.add(url);
+
+            final slugMatch = RegExp(r'/job/details/(.+)$').firstMatch(url);
+            var title = 'Novartis Job';
+            if (slugMatch != null) {
+              var titleSlug = slugMatch.group(1)!;
+              titleSlug = titleSlug.replaceFirst(RegExp(r'^req-\d+-'), '');
+              titleSlug = titleSlug.replaceFirst(RegExp(r'-[a-z]{2}-[a-z]{2}$'), '');
+              title = titleSlug
+                  .replaceAll('-', ' ')
+                  .split(' ')
+                  .map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}')
+                  .join(' ');
+            }
+
+            rows.add(ScanResultRow(
+              company: companyName,
+              title: title,
+              companyUrl: 'https://www.novartis.com/careers/career-search',
+              applyLink: url,
+              location: 'See listing',
+              duration: '—',
+              deadline: '—',
+              source: 'Novartis Careers Sitemap',
+              error: '',
+            ));
+          }
+        }
+
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
 
     if (host.contains('nestle.com')) {
       try {
