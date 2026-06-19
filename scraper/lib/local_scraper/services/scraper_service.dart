@@ -136,7 +136,9 @@ class ScraperService {
     );
 
     final careerHost = careerUri.host.toLowerCase();
-    if (careerHost.contains('limitbreak.com') ||
+    if (careerHost.contains('pgcareers.com') ||
+        careerHost.contains('orange.jobs') ||
+        careerHost.contains('limitbreak.com') ||
         careerHost.contains('careers.loreal.com') ||
         careerHost.contains('loreal.com') ||
         careerHost.contains('m2pfintech.com') ||
@@ -311,7 +313,9 @@ class ScraperService {
   }
 
   bool _isPrioritizedKnownApi(String loweredHost) {
-    return loweredHost.contains('gem.com') ||
+    return loweredHost.contains('pgcareers.com') ||
+        loweredHost.contains('orange.jobs') ||
+        loweredHost.contains('gem.com') ||
         loweredHost.contains('niramai.com') ||
         loweredHost.contains('nvidia.com') ||
         loweredHost.contains('novartis.com') ||
@@ -342,6 +346,8 @@ class ScraperService {
         loweredHost.contains('careers.bankofamerica.com') ||
         loweredHost.contains('layerzero.network') ||
         loweredHost.contains('oraclecloud.com') ||
+        loweredHost.contains('careers.oracle.com') ||
+        loweredHost.contains('oracle.com') ||
         loweredHost.contains('eightfold.ai') ||
         loweredHost.contains('kraftheinz.com') ||
         loweredHost.contains('kellanova.com') ||
@@ -532,6 +538,16 @@ class ScraperService {
     final discoveredHost = discoveredUri.host.toLowerCase();
     final originalHost = originalUri.host.toLowerCase();
 
+    if (originalHost.contains('orange.jobs') ||
+        discoveredHost.contains('orange.jobs')) {
+      return Uri.parse('https://orange.jobs/gb/en/search-results');
+    }
+
+    if (originalHost.contains('pgcareers.com') ||
+        discoveredHost.contains('pgcareers.com')) {
+      return Uri.parse('https://www.pgcareers.com/in/en/search-results');
+    }
+
     if (originalHost.contains('morpho.org')) {
       return Uri.parse('https://jobs.ashbyhq.com/morpho');
     }
@@ -708,6 +724,153 @@ class ScraperService {
     required List<String> keywords,
   }) async {
     final host = careerUri.host.toLowerCase();
+
+    if (host.contains('orange.jobs') || host.contains('pgcareers.com')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final seen = <String>{};
+        final matchTerms = keywords;
+
+        int totalHits = 0;
+        int from = 0;
+        int emptyStreak = 0;
+
+        while (true) {
+          final path = careerUri.path.isEmpty || careerUri.path == '/'
+              ? (host.contains('orange.jobs') ? '/gb/en/search-results' : '/in/en/search-results')
+              : careerUri.path;
+          final uri = Uri.parse('${careerUri.scheme}://${careerUri.host}$path?from=$from&s=1&sortBy=Most+recent');
+          final resp = await _client.get(
+            uri,
+            headers: {
+              'User-Agent': userAgents[DateTime.now().millisecond % userAgents.length],
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            },
+          ).timeout(const Duration(seconds: 15));
+
+          if (resp.statusCode != 200) {
+            emptyStreak++;
+            if (emptyStreak > 3) break;
+            from += 10;
+            continue;
+          }
+
+          final html = resp.body;
+          final marker = '"eagerLoadRefineSearch":';
+          final startIndex = html.indexOf(marker);
+          if (startIndex < 0) {
+            emptyStreak++;
+            if (emptyStreak > 3) break;
+            from += 10;
+            continue;
+          }
+
+          final jsonStart = html.indexOf('{', startIndex + marker.length);
+          if (jsonStart < 0) {
+            emptyStreak++;
+            if (emptyStreak > 3) break;
+            from += 10;
+            continue;
+          }
+
+          int depth = 0;
+          int jsonEnd = jsonStart;
+          for (int i = jsonStart; i < html.length; i++) {
+            if (html[i] == '{') depth++;
+            if (html[i] == '}') {
+              depth--;
+              if (depth == 0) {
+                jsonEnd = i + 1;
+                break;
+              }
+            }
+          }
+
+          Map<String, dynamic> data;
+          try {
+            final jsonStr = html.substring(jsonStart, jsonEnd);
+            data = jsonDecode(jsonStr) as Map<String, dynamic>;
+          } catch (e) {
+            emptyStreak++;
+            if (emptyStreak > 3) break;
+            from += 10;
+            continue;
+          }
+
+          if (from == 0) {
+            totalHits = data['totalHits'] as int? ?? 0;
+          }
+
+          final dataObj = data['data'] as Map<String, dynamic>? ?? {};
+          final jobsList = dataObj['jobs'] as List? ?? [];
+          final jobs = jobsList.whereType<Map<String, dynamic>>().toList();
+
+          if (jobs.isEmpty) {
+            emptyStreak++;
+            if (emptyStreak > 3) break;
+          } else {
+            emptyStreak = 0;
+            for (final job in jobs) {
+              final title = (job['title'] as String? ?? '').trim();
+              if (title.isEmpty) continue;
+
+              final applyLink = (job['applyUrl'] as String? ?? '').trim();
+              if (applyLink.isEmpty) continue;
+
+              final location = (job['location'] as String? ??
+                      job['cityStateCountry'] as String? ??
+                      (job['multi_location'] as List?)?.join(', ') ??
+                      'Not specified')
+                  .trim();
+
+              final descTeaser = (job['descriptionTeaser'] as String? ?? '').trim();
+              final descTeaserKeyword = (job['ml_job_parser']?['descriptionTeaser_keyword'] as String? ?? '').trim();
+              final fullDesc = '$descTeaser\n$descTeaserKeyword';
+
+              if (matchTerms.isNotEmpty) {
+                final titleLower = title.toLowerCase();
+                final descLower = fullDesc.toLowerCase();
+                final locLower = location.toLowerCase();
+                final exactWordMatch = matchTerms.any((kw) {
+                  final pattern = RegExp('\\b${RegExp.escape(kw.toLowerCase())}\\b');
+                  return pattern.hasMatch(titleLower) ||
+                      pattern.hasMatch(descLower) ||
+                      pattern.hasMatch(locLower);
+                });
+                if (!exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
+                  continue;
+                }
+              }
+
+              final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
+              if (seen.add(key)) {
+                final durationData = parseDuration(fullDesc);
+                rows.add(
+                  ScanResultRow(
+                    company: companyName,
+                    title: title,
+                    companyUrl: careerUri.toString(),
+                    applyLink: applyLink,
+                    location: location.isEmpty ? 'Not specified' : location,
+                    duration: durationData.$1,
+                    deadline: '—',
+                    source: host.contains('orange.jobs') ? 'Orange Jobs' : 'P&G Careers',
+                    error: '',
+                  ),
+                );
+              }
+            }
+          }
+
+          from += 10;
+          if (from > totalHits + 50) break;
+        }
+
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
 
     if (host.contains('explore.jobs.netflix.net') ||
         host.contains('netflix.com') ||
@@ -9961,14 +10124,17 @@ class ScraperService {
       } catch (_) {}
     }
 
-    if (host.contains('oraclecloud.com') &&
-        careerUri.path.toLowerCase().contains('/hcmui/candidateexperience/')) {
+    if ((host.contains('oraclecloud.com') &&
+            careerUri.path.toLowerCase().contains('/hcmui/candidateexperience/')) ||
+        (host.contains('oracle.com') &&
+            careerUri.path.toLowerCase().contains('/sites/jobsearch/'))) {
       try {
         final rows = <ScanResultRow>[];
         final seen = <String>{};
         final matchTerms = keywords;
 
         String? siteNumber;
+        String? backendHost;
         final landingHtml = await _fetch(careerUri);
         if (landingHtml != null && landingHtml.isNotEmpty) {
           final siteMatch = RegExp(
@@ -9976,7 +10142,15 @@ class ScraperService {
             caseSensitive: false,
           ).firstMatch(landingHtml);
           siteNumber = siteMatch?.group(1)?.trim();
+
+          final cloudMatch = RegExp(
+            r'https?://([a-zA-Z0-9.-]+\.oraclecloud\.com)',
+            caseSensitive: false,
+          ).firstMatch(landingHtml);
+          backendHost = cloudMatch?.group(1)?.trim();
         }
+
+        final apiHost = backendHost ?? careerUri.host;
 
         final siteCandidates = <String>{};
         if (siteNumber != null && siteNumber.isNotEmpty) {
@@ -9992,139 +10166,123 @@ class ScraperService {
             ? pathSegments[sitesIndex + 1].trim()
             : '';
 
-        final sitesUri = Uri.https(
-          careerUri.host,
-          '/hcmRestApi/resources/latest/recruitingCESites',
-          {'onlyData': 'true', 'limit': '200', 'offset': '0'},
-        );
-        final sitesResp = await _client
-            .get(
-              sitesUri,
-              headers: {
-                'user-agent':
-                    userAgents[DateTime.now().millisecond % userAgents.length],
-                'accept': 'application/json, text/plain, */*',
-                'referer': careerUri.toString(),
-              },
-            )
-            .timeout(const Duration(seconds: 12));
-        if (sitesResp.statusCode < 400 && sitesResp.body.trim().isNotEmpty) {
-          final decoded = jsonDecode(sitesResp.body);
-          if (decoded is Map && decoded['items'] is List) {
-            final items = (decoded['items'] as List).whereType<Map>();
-            for (final item in items) {
-              final map = item.map((k, v) => MapEntry(k.toString(), v));
-              final sn = (map['SiteNumber'] ?? '').toString().trim();
-              if (sn.isEmpty) continue;
-              final siteName = (map['SiteName'] ?? '').toString().trim();
-              final siteCode = (map['SiteCode'] ?? '').toString().trim();
-              final siteUrl = (map['SiteURLName'] ?? '').toString().trim();
-              if (siteUrlName.isNotEmpty &&
-                  (siteUrl.toLowerCase() == siteUrlName.toLowerCase() ||
-                      siteName.toLowerCase() == siteUrlName.toLowerCase() ||
-                      siteCode.toLowerCase() == siteUrlName.toLowerCase())) {
-                siteCandidates.add(sn);
+        if (siteCandidates.isEmpty && siteUrlName.isNotEmpty) {
+          final sitesUri = Uri.https(
+            apiHost,
+            '/hcmRestApi/resources/latest/recruitingCESites',
+            {'onlyData': 'true', 'limit': '200', 'offset': '0'},
+          );
+          final sitesResp = await _client
+              .get(
+                sitesUri,
+                headers: {
+                  'user-agent':
+                      userAgents[DateTime.now().millisecond % userAgents.length],
+                  'accept': 'application/json, text/plain, */*',
+                  'referer': careerUri.toString(),
+                },
+              )
+              .timeout(const Duration(seconds: 12));
+          if (sitesResp.statusCode < 400 && sitesResp.body.trim().isNotEmpty) {
+            final decoded = jsonDecode(sitesResp.body);
+            if (decoded is Map && decoded['items'] is List) {
+              final items = (decoded['items'] as List).whereType<Map>();
+              for (final item in items) {
+                final map = item.map((k, v) => MapEntry(k.toString(), v));
+                final sn = (map['SiteNumber'] ?? '').toString().trim();
+                if (sn.isEmpty) continue;
+                final siteName = (map['SiteName'] ?? '').toString().trim();
+                final siteCode = (map['SiteCode'] ?? '').toString().trim();
+                final siteUrl = (map['SiteURLName'] ?? '').toString().trim();
+                if (siteUrlName.isNotEmpty &&
+                    (siteUrl.toLowerCase() == siteUrlName.toLowerCase() ||
+                        siteName.toLowerCase() == siteUrlName.toLowerCase() ||
+                        siteCode.toLowerCase() == siteUrlName.toLowerCase())) {
+                  siteCandidates.add(sn);
+                }
               }
             }
           }
         }
 
         if (siteCandidates.isEmpty) {
-          return const [];
+          if (host.contains('oracle.com')) {
+            siteCandidates.add('CX_45001');
+          } else {
+            return const [];
+          }
         }
 
         for (final sn in siteCandidates) {
           final cleanSn = sn.replaceAll("'", '');
-          for (final term in matchTerms) {
-            var offset = 0;
-            const limit = 24;
-            var hasMore = true;
+          final firstLimit = 200;
+          final firstFinder = 'findReqs;siteNumber=$cleanSn,limit=$firstLimit,offset=0';
+          final firstUri = Uri.https(
+            apiHost,
+            '/hcmRestApi/resources/latest/recruitingCEJobRequisitions',
+            {
+              'onlyData': 'true',
+              'expand':
+                  'requisitionList.workLocation,requisitionList.otherWorkLocations,requisitionList.secondaryLocations,flexFieldsFacet.values,requisitionList.requisitionFlexFields',
+              'finder': firstFinder,
+            },
+          );
 
-            while (hasMore && offset < 300) {
-              final escapedTerm = term.replaceAll('"', r'\"');
-              final finderValue =
-                  'findReqs;siteNumber=$cleanSn,keyword="$escapedTerm",limit=$limit,offset=$offset';
-              final reqUri = Uri.https(
-                careerUri.host,
-                '/hcmRestApi/resources/latest/recruitingCEJobRequisitions',
-                {
-                  'onlyData': 'true',
-                  'expand':
-                      'requisitionList.workLocation,requisitionList.otherWorkLocations,requisitionList.secondaryLocations,flexFieldsFacet.values,requisitionList.requisitionFlexFields',
-                  'finder': finderValue,
-                },
-              );
+          final firstResp = await _client.get(
+            firstUri,
+            headers: {
+              'user-agent':
+                  userAgents[DateTime.now().millisecond % userAgents.length],
+              'accept': 'application/json, text/plain, */*',
+              'referer': careerUri.toString(),
+            },
+          ).timeout(const Duration(seconds: 15));
 
-              final reqResp = await _client
-                  .get(
-                    reqUri,
-                    headers: {
-                      'user-agent':
-                          userAgents[DateTime.now().millisecond %
-                              userAgents.length],
-                      'accept': 'application/json, text/plain, */*',
-                      'referer': careerUri.toString(),
-                    },
-                  )
-                  .timeout(const Duration(seconds: 12));
+          if (firstResp.statusCode >= 400 || firstResp.body.trim().isEmpty) {
+            continue;
+          }
 
-              if (reqResp.statusCode >= 400 || reqResp.body.trim().isEmpty) {
-                break;
+          final decoded = jsonDecode(firstResp.body);
+          if (decoded is! Map) continue;
+          final items = decoded['items'];
+          if (items is! List || items.isEmpty) continue;
+          final searchContainer = items.first;
+          if (searchContainer is! Map) continue;
+
+          final requisitions = searchContainer['requisitionList'];
+          if (requisitions is! List) continue;
+
+          void processReqs(List reqList) {
+            for (final item in reqList.whereType<Map>()) {
+              final map = item.map((k, v) => MapEntry(k.toString(), v));
+              String cleanValue(dynamic value) {
+                final text = value?.toString().trim() ?? '';
+                return text.toLowerCase() == 'null' ? '' : text;
               }
 
-              final decoded = jsonDecode(reqResp.body);
-              if (decoded is! Map) {
-                break;
-              }
+              final title =
+                  ((map['Title'] ?? map['JobTitle']) ?? map['RequisitionTitle'])
+                      .toString()
+                      .trim();
+              if (title.isEmpty) continue;
 
-              final items = decoded['items'];
-              if (items is! List || items.isEmpty) {
-                break;
-              }
+              final desc = (((map['Description'] ?? map['JobDescription']) ??
+                          map['ExternalDescription']) ??
+                      map['ShortDescriptionStr'])
+                  .toString()
+                  .trim();
+              final location = ((map['PrimaryLocation'] ?? map['Location']) ??
+                      map['Locations'])
+                  .toString()
+                  .trim();
 
-              final searchContainer = items.first;
-              if (searchContainer is! Map) {
-                break;
-              }
-
-              final requisitions = searchContainer['requisitionList'];
-              if (requisitions is! List || requisitions.isEmpty) {
-                break;
-              }
-
-              for (final item in requisitions.whereType<Map>()) {
-                final map = item.map((k, v) => MapEntry(k.toString(), v));
-                String cleanValue(dynamic value) {
-                  final text = value?.toString().trim() ?? '';
-                  return text.toLowerCase() == 'null' ? '' : text;
-                }
-
-                final title =
-                    ((map['Title'] ?? map['JobTitle']) ??
-                            map['RequisitionTitle'])
-                        .toString()
-                        .trim();
-                if (title.isEmpty) continue;
-
-                final desc =
-                    (((map['Description'] ?? map['JobDescription']) ??
-                                map['ExternalDescription']) ??
-                            map['ShortDescriptionStr'])
-                        .toString()
-                        .trim();
-                final location =
-                    ((map['PrimaryLocation'] ?? map['Location']) ??
-                            map['Locations'])
-                        .toString()
-                        .trim();
-
+              if (matchTerms.isNotEmpty) {
                 final titleLower = title.toLowerCase();
                 final descLower = desc.toLowerCase();
                 final locLower = location.toLowerCase();
                 final exactWordMatch = matchTerms.any((kw) {
-                  final pattern = RegExp(
-                    '\\b${RegExp.escape(kw.toLowerCase())}\\b',
-                  );
+                  final pattern =
+                      RegExp('\\b${RegExp.escape(kw.toLowerCase())}\\b');
                   return pattern.hasMatch(titleLower) ||
                       pattern.hasMatch(descLower) ||
                       pattern.hasMatch(locLower);
@@ -10132,56 +10290,106 @@ class ScraperService {
                 if (!exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
                   continue;
                 }
-
-                final id = cleanValue(
-                  (map['Id'] ?? map['RequisitionNumber']) ?? map['JobId'],
-                );
-                final rawLink = cleanValue(
-                  (map['ExternalURL'] ?? map['JobLink']) ?? map['JobDetailURL'],
-                );
-                final applyLink = rawLink.isNotEmpty
-                    ? rawLink
-                    : (id.isEmpty
-                          ? careerUri.toString()
-                          : '${careerUri.scheme}://${careerUri.host}/hcmUI/CandidateExperience/en/sites/$siteUrlName/job/$id');
-
-                final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
-                if (seen.contains(key)) continue;
-                seen.add(key);
-
-                final durationData = parseDuration(desc);
-                rows.add(
-                  ScanResultRow(
-                    company: companyName,
-                    title: title,
-                    companyUrl: careerUri.toString(),
-                    applyLink: applyLink,
-                    location: location.isEmpty ? 'Not specified' : location,
-                    duration: durationData.$1,
-                    deadline: '—',
-                    source: 'Oracle Candidate Experience API',
-                    error: '',
-                  ),
-                );
               }
 
-              final totalJobsCount =
-                  int.tryParse(
-                    (searchContainer['TotalJobsCount'] ?? '').toString(),
-                  ) ??
-                  0;
-              final currentOffset =
-                  int.tryParse((searchContainer['Offset'] ?? '').toString()) ??
-                  offset;
-              final currentLimit =
-                  int.tryParse((searchContainer['Limit'] ?? '').toString()) ??
-                  limit;
-              final nextOffset = currentOffset + currentLimit;
-              hasMore = nextOffset < totalJobsCount;
-              if (!hasMore) break;
-              offset = nextOffset;
+              final id = cleanValue(
+                (map['Id'] ?? map['RequisitionNumber']) ?? map['JobId'],
+              );
+              final rawLink = cleanValue(
+                (map['ExternalURL'] ?? map['JobLink']) ?? map['JobDetailURL'],
+              );
+              final applyLink = rawLink.isNotEmpty
+                  ? rawLink
+                  : (id.isEmpty
+                      ? careerUri.toString()
+                      : '${careerUri.scheme}://${careerUri.host}/hcmUI/CandidateExperience/en/sites/$siteUrlName/job/$id');
+
+              final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
+              if (seen.contains(key)) continue;
+              seen.add(key);
+
+              final durationData = parseDuration(desc);
+              rows.add(
+                ScanResultRow(
+                  company: companyName,
+                  title: title,
+                  companyUrl: careerUri.toString(),
+                  applyLink: applyLink,
+                  location: location.isEmpty ? 'Not specified' : location,
+                  duration: durationData.$1,
+                  deadline: '—',
+                  source: 'Oracle Candidate Experience API',
+                  error: '',
+                ),
+              );
             }
           }
+
+          processReqs(requisitions);
+
+          final organizationsFacet =
+              searchContainer['organizationsFacet'] as List? ?? [];
+          var totalJobs = 0;
+          if (organizationsFacet.isNotEmpty) {
+            totalJobs = organizationsFacet[0]['TotalCount'] as int? ?? 0;
+          }
+
+          if (totalJobs == 0) {
+            if (requisitions.length < firstLimit) {
+              totalJobs = requisitions.length;
+            } else {
+              totalJobs = 3000;
+            }
+          }
+
+          final futures = <Future<void>>[];
+          final limit = 200;
+          for (int offset = limit; offset < totalJobs + limit; offset += limit) {
+            final currentOffset = offset;
+            futures.add(() async {
+              final finder =
+                  'findReqs;siteNumber=$cleanSn,limit=$limit,offset=$currentOffset';
+              final reqUri = Uri.https(
+                apiHost,
+                '/hcmRestApi/resources/latest/recruitingCEJobRequisitions',
+                {
+                  'onlyData': 'true',
+                  'expand':
+                      'requisitionList.workLocation,requisitionList.otherWorkLocations,requisitionList.secondaryLocations,flexFieldsFacet.values,requisitionList.requisitionFlexFields',
+                  'finder': finder,
+                },
+              );
+
+              try {
+                final resp = await _client.get(
+                  reqUri,
+                  headers: {
+                    'user-agent': userAgents[
+                        DateTime.now().millisecond % userAgents.length],
+                    'accept': 'application/json, text/plain, */*',
+                    'referer': careerUri.toString(),
+                  },
+                ).timeout(const Duration(seconds: 15));
+
+                if (resp.statusCode == 200) {
+                  final pageDecoded = jsonDecode(resp.body);
+                  final pageItems = pageDecoded['items'] as List?;
+                  if (pageItems != null && pageItems.isNotEmpty) {
+                    final pageContainer = pageItems.first;
+                    if (pageContainer is Map) {
+                      final pageReqs =
+                          pageContainer['requisitionList'] as List?;
+                      if (pageReqs != null) {
+                        processReqs(pageReqs);
+                      }
+                    }
+                  }
+                }
+              } catch (_) {}
+            }());
+          }
+
+          await Future.wait(futures);
         }
 
         return rows;
