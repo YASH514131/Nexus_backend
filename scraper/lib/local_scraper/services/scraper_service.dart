@@ -136,7 +136,13 @@ class ScraperService {
     );
 
     final careerHost = careerUri.host.toLowerCase();
-    if (careerHost.contains('pgcareers.com') ||
+    if (careerHost.contains('pfizer.com') ||
+        careerHost.contains('pepsicojobs.com') ||
+        careerHost.contains('jobs.lever.co') ||
+        careerHost.contains('paxos.com') ||
+        careerHost.contains('paradigm.xyz') ||
+        careerHost.contains('panteracapital.com') ||
+        careerHost.contains('pgcareers.com') ||
         careerHost.contains('orange.jobs') ||
         careerHost.contains('limitbreak.com') ||
         careerHost.contains('careers.loreal.com') ||
@@ -313,7 +319,12 @@ class ScraperService {
   }
 
   bool _isPrioritizedKnownApi(String loweredHost) {
-    return loweredHost.contains('pgcareers.com') ||
+    return loweredHost.contains('pfizer.com') ||
+        loweredHost.contains('pepsicojobs.com') ||
+        loweredHost.contains('paxos.com') ||
+        loweredHost.contains('paradigm.xyz') ||
+        loweredHost.contains('panteracapital.com') ||
+        loweredHost.contains('pgcareers.com') ||
         loweredHost.contains('orange.jobs') ||
         loweredHost.contains('gem.com') ||
         loweredHost.contains('niramai.com') ||
@@ -543,6 +554,31 @@ class ScraperService {
       return Uri.parse('https://orange.jobs/gb/en/search-results');
     }
 
+    if (originalHost.contains('pepsicojobs.com') ||
+        discoveredHost.contains('pepsicojobs.com')) {
+      return Uri.parse('https://www.pepsicojobs.com/api/jobs');
+    }
+
+    if (originalHost.contains('pfizer.com') ||
+        discoveredHost.contains('pfizer.com')) {
+      return Uri.parse('https://pfizer.wd1.myworkdayjobs.com/PfizerCareers');
+    }
+
+    if (originalHost.contains('paradigm.xyz') ||
+        discoveredHost.contains('paradigm.xyz')) {
+      return Uri.parse('https://www.paradigm.xyz/careers');
+    }
+
+    if (originalHost.contains('paxos.com') ||
+        discoveredHost.contains('paxos.com')) {
+      return Uri.parse('https://jobs.ashbyhq.com/paxos');
+    }
+
+    if (originalHost.contains('panteracapital.com') ||
+        discoveredHost.contains('panteracapital.com')) {
+      return Uri.parse('https://jobs.panteracapital.com/api-boards/search-jobs');
+    }
+
     if (originalHost.contains('pgcareers.com') ||
         discoveredHost.contains('pgcareers.com')) {
       return Uri.parse('https://www.pgcareers.com/in/en/search-results');
@@ -724,6 +760,268 @@ class ScraperService {
     required List<String> keywords,
   }) async {
     final host = careerUri.host.toLowerCase();
+
+    if (host.contains('pepsicojobs.com')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final seen = <String>{};
+        final matchTerms = keywords;
+
+        var page = 1;
+        const limit = 100;
+        var totalHits = limit;
+
+        while (rows.length < totalHits) {
+          final uri = Uri.parse('https://www.pepsicojobs.com/api/jobs?page=$page&limit=$limit');
+          final resp = await _client.get(
+            uri,
+            headers: {
+              'User-Agent': userAgents[DateTime.now().millisecond % userAgents.length],
+              'Accept': 'application/json',
+            },
+          ).timeout(const Duration(seconds: 15));
+
+          if (resp.statusCode != 200 || resp.body.trim().isEmpty) {
+            break;
+          }
+
+          final data = jsonDecode(resp.body);
+          if (data is! Map) break;
+
+          final rawTotal = data['totalCount'];
+          if (rawTotal is num) {
+            totalHits = rawTotal.toInt();
+          }
+
+          final jobsList = data['jobs'] as List? ?? [];
+          if (jobsList.isEmpty) break;
+
+          for (final job in jobsList.whereType<Map>()) {
+            final jobData = job['data'];
+            if (jobData is! Map) continue;
+
+            final map = jobData.map((k, v) => MapEntry(k.toString(), v));
+            final title = (map['title'] ?? '').toString().trim();
+            if (title.isEmpty) continue;
+
+            final slug = (map['slug'] ?? '').toString().trim();
+            final applyLink = (map['apply_url'] ?? '').toString().trim().isNotEmpty
+                ? map['apply_url'].toString().trim()
+                : 'https://www.pepsicojobs.com/main/jobs/$slug';
+
+            final shortLoc = (map['short_location'] ?? '').toString().trim();
+            final fullLoc = (map['full_location'] ?? '').toString().trim();
+            final location = shortLoc.isNotEmpty ? shortLoc : (fullLoc.isNotEmpty ? fullLoc : 'Not specified');
+
+            if (matchTerms.isNotEmpty) {
+              final titleLower = title.toLowerCase();
+              final exactWordMatch = matchTerms.any((kw) {
+                final pattern = RegExp('\\b${RegExp.escape(kw.toLowerCase())}\\b');
+                return pattern.hasMatch(titleLower) ||
+                    pattern.hasMatch(location.toLowerCase());
+              });
+              if (!exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
+                continue;
+              }
+            }
+
+            final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
+            if (seen.add(key)) {
+              final empType = (map['employment_type'] ?? '').toString().trim();
+              final duration = empType.isNotEmpty ? empType : parseDuration(title).$1;
+              rows.add(
+                ScanResultRow(
+                  company: companyName,
+                  title: title,
+                  companyUrl: careerUri.toString(),
+                  applyLink: applyLink,
+                  location: location,
+                  duration: duration,
+                  deadline: '—',
+                  source: 'PepsiCo Careers',
+                  error: '',
+                ),
+              );
+            }
+          }
+
+          page++;
+          if (jobsList.length < limit) break;
+        }
+
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (host.contains('paradigm.xyz')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final seen = <String>{};
+        final matchTerms = keywords;
+
+        final html = await _fetch(careerUri);
+        if (html == null || html.isEmpty) return const [];
+
+        final marker = '<script id="__NEXT_DATA__" type="application/json">';
+        final startIndex = html.indexOf(marker);
+        if (startIndex < 0) return const [];
+
+        final jsonStart = html.indexOf('{', startIndex + marker.length);
+        if (jsonStart < 0) return const [];
+
+        int depth = 0;
+        int jsonEnd = jsonStart;
+        for (int i = jsonStart; i < html.length; i++) {
+          if (html[i] == '{') depth++;
+          if (html[i] == '}') {
+            depth--;
+            if (depth == 0) {
+              jsonEnd = i + 1;
+              break;
+            }
+          }
+        }
+
+        final jsonStr = html.substring(jsonStart, jsonEnd);
+        final data = jsonDecode(jsonStr);
+        if (data is Map) {
+          final props = data['props'] as Map? ?? {};
+          final pageProps = props['pageProps'] as Map? ?? {};
+          final jobsList = pageProps['jobs'] as List? ?? [];
+          for (final job in jobsList.whereType<Map>()) {
+            final map = job.map((k, v) => MapEntry(k.toString(), v));
+            final title = (map['title'] ?? '').toString().trim();
+            if (title.isEmpty) continue;
+
+            final comp = (map['companyName'] ?? companyName).toString().trim();
+            final applyLink = (map['url'] ?? '').toString().trim();
+            if (applyLink.isEmpty) continue;
+
+            final locs = map['locations'] as List? ?? [];
+            final location = locs.isEmpty ? 'Not specified' : locs.join(', ');
+
+            if (matchTerms.isNotEmpty) {
+              final titleLower = title.toLowerCase();
+              final compLower = comp.toLowerCase();
+              final locLower = location.toLowerCase();
+              final exactWordMatch = matchTerms.any((kw) {
+                final pattern = RegExp('\\b${RegExp.escape(kw.toLowerCase())}\\b');
+                return pattern.hasMatch(titleLower) ||
+                    pattern.hasMatch(compLower) ||
+                    pattern.hasMatch(locLower);
+              });
+              if (!exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
+                continue;
+              }
+            }
+
+            final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
+            if (seen.add(key)) {
+              final durationData = parseDuration(title);
+              rows.add(
+                ScanResultRow(
+                  company: comp,
+                  title: title,
+                  companyUrl: careerUri.toString(),
+                  applyLink: applyLink,
+                  location: location,
+                  duration: durationData.$1,
+                  deadline: '—',
+                  source: 'Paradigm Careers',
+                  error: '',
+                ),
+              );
+            }
+          }
+        }
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (host.contains('panteracapital.com')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final seen = <String>{};
+        final matchTerms = keywords;
+
+        final payload = {
+          'meta': {'size': 1000},
+          'board': {'id': 'pantera-capital', 'isParent': true},
+          'query': {},
+          'grouped': false,
+        };
+
+        final resp = await _client.post(
+          careerUri,
+          headers: {
+            'User-Agent': userAgents[DateTime.now().millisecond % userAgents.length],
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode(payload),
+        ).timeout(const Duration(seconds: 30));
+
+        if (resp.statusCode == 200) {
+          final data = jsonDecode(resp.body);
+          if (data is Map) {
+            final jobsList = data['jobs'] as List? ?? [];
+            for (final job in jobsList.whereType<Map>()) {
+              final map = job.map((k, v) => MapEntry(k.toString(), v));
+              final title = (map['title'] ?? '').toString().trim();
+              if (title.isEmpty) continue;
+
+              final comp = (map['companyName'] ?? companyName).toString().trim();
+              final applyLink = (map['applyUrl'] ?? map['url'] ?? '').toString().trim();
+              if (applyLink.isEmpty) continue;
+
+              final locs = map['locations'] as List? ?? [];
+              final location = locs.isEmpty ? 'Not specified' : locs.join(', ');
+
+              if (matchTerms.isNotEmpty) {
+                final titleLower = title.toLowerCase();
+                final compLower = comp.toLowerCase();
+                final locLower = location.toLowerCase();
+                final exactWordMatch = matchTerms.any((kw) {
+                  final pattern = RegExp('\\b${RegExp.escape(kw.toLowerCase())}\\b');
+                  return pattern.hasMatch(titleLower) ||
+                      pattern.hasMatch(compLower) ||
+                      pattern.hasMatch(locLower);
+                });
+                if (!exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
+                  continue;
+                }
+              }
+
+              final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
+              if (seen.add(key)) {
+                final isContract = map['contractor'] == true;
+                final duration = isContract ? 'Contract' : parseDuration(title).$1;
+                rows.add(
+                  ScanResultRow(
+                    company: comp,
+                    title: title,
+                    companyUrl: careerUri.toString(),
+                    applyLink: applyLink,
+                    location: location,
+                    duration: duration,
+                    deadline: '—',
+                    source: 'Pantera Capital Jobs',
+                    error: '',
+                  ),
+                );
+              }
+            }
+          }
+        }
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
 
     if (host.contains('orange.jobs') || host.contains('pgcareers.com')) {
       try {
@@ -6438,6 +6736,7 @@ class ScraperService {
         final rows = <ScanResultRow>[];
         final seen = <String>{};
         final matchTerms = keywords;
+        final queryTerms = keywords.isEmpty ? [''] : keywords;
 
         final workdayParams = extractWorkdayTenantAndSite(careerUri);
         if (workdayParams == null) {
@@ -6452,12 +6751,12 @@ class ScraperService {
           '/wday/cxs/$tenant/$site/jobs',
         );
 
-        for (final term in matchTerms) {
+        for (final term in queryTerms) {
           var offset = 0;
           const limit = 20;
           int? total;
 
-          while (offset <= 180) {
+          while (total == null || offset < total) {
             final payload = jsonEncode({
               'limit': limit,
               'offset': offset,

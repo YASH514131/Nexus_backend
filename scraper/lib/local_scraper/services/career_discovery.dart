@@ -24,6 +24,17 @@ const careerPathHints = <String>[
 ];
 
 Future<Uri> discoverCareerUrl(http.Client client, Uri baseUri) async {
+  final hostLower = baseUri.host.toLowerCase();
+  if (hostLower.contains('lever.co') ||
+      hostLower.contains('ashbyhq.com') ||
+      hostLower.contains('greenhouse.io') ||
+      hostLower.contains('myworkdayjobs.com') ||
+      hostLower.contains('myworkdaysite.com') ||
+      hostLower.contains('eightfold.ai') ||
+      hostLower.contains('smartrecruiters.com')) {
+    return baseUri;
+  }
+
   final pathLower = baseUri.path.toLowerCase();
   final hasExplicitPath = pathLower.isNotEmpty && pathLower != '/';
   final looksLikeCareerPath = [

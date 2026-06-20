@@ -47,6 +47,7 @@ const Map<String, String> defaultCompanyUrls = {
   'Gauntlet': 'https://www.gauntlet.xyz/careers#open-roles',
   'Chaos Labs': 'https://chaoslabs.xyz/careers',
   'Wintermute': 'https://jobs.lever.co/wintermute-trading',
+  'paytm': 'https://jobs.lever.co/paytm',
   'Jump Crypto': 'https://jumpcrypto.com/careers',
   '0x Labs': 'https://0x.org/careers#open-positions',
   'CowSwap': 'https://jobs.ashbyhq.com/cow-dao?utm_source=laMjao1z57',
