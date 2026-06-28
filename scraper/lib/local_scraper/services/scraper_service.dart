@@ -136,7 +136,13 @@ class ScraperService {
     );
 
     final careerHost = careerUri.host.toLowerCase();
-    if (careerHost.contains('pfizer.com') ||
+    if (careerHost.contains('pwc.in') ||
+        careerHost.contains('polygon.technology') ||
+        careerHost.contains('greenhouse.io') ||
+        careerHost.contains('jobs.ashbyhq.com') ||
+        careerHost.contains('phonepe.com') ||
+        careerHost.contains('phantom.com') ||
+        careerHost.contains('pfizer.com') ||
         careerHost.contains('pepsicojobs.com') ||
         careerHost.contains('jobs.lever.co') ||
         careerHost.contains('paxos.com') ||
@@ -319,7 +325,11 @@ class ScraperService {
   }
 
   bool _isPrioritizedKnownApi(String loweredHost) {
-    return loweredHost.contains('pfizer.com') ||
+    return loweredHost.contains('pwc.in') ||
+        loweredHost.contains('polygon.technology') ||
+        loweredHost.contains('phonepe.com') ||
+        loweredHost.contains('phantom.com') ||
+        loweredHost.contains('pfizer.com') ||
         loweredHost.contains('pepsicojobs.com') ||
         loweredHost.contains('paxos.com') ||
         loweredHost.contains('paradigm.xyz') ||
@@ -557,6 +567,26 @@ class ScraperService {
     if (originalHost.contains('pepsicojobs.com') ||
         discoveredHost.contains('pepsicojobs.com')) {
       return Uri.parse('https://www.pepsicojobs.com/api/jobs');
+    }
+
+    if (originalHost.contains('phonepe.com') ||
+        discoveredHost.contains('phonepe.com')) {
+      return Uri.parse('https://boards.greenhouse.io/phonepe');
+    }
+
+    if (originalHost.contains('pwc.in') ||
+        discoveredHost.contains('pwc.in')) {
+      return Uri.parse('https://www.pwc.in/careers/experienced-jobs.html');
+    }
+
+    if (originalHost.contains('polygon.technology') ||
+        discoveredHost.contains('polygon.technology')) {
+      return Uri.parse('https://jobs.ashbyhq.com/polygon-labs');
+    }
+
+    if (originalHost.contains('phantom.com') ||
+        discoveredHost.contains('phantom.com')) {
+      return Uri.parse('https://jobs.ashbyhq.com/phantom');
     }
 
     if (originalHost.contains('pfizer.com') ||
@@ -847,6 +877,89 @@ class ScraperService {
 
           page++;
           if (jobsList.length < limit) break;
+        }
+
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (host.contains('pwc.in')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final seen = <String>{};
+        final matchTerms = keywords;
+
+        final resp = await _client.get(
+          careerUri,
+          headers: {
+            'User-Agent': userAgents[DateTime.now().millisecond % userAgents.length],
+          },
+        ).timeout(const Duration(seconds: 15));
+
+        if (resp.statusCode != 200 || resp.body.trim().isEmpty) {
+          return const [];
+        }
+
+        final html = resp.body;
+        const marker = 'var jsondata =';
+        final startIndex = html.indexOf(marker);
+        if (startIndex >= 0) {
+          final jsonStart = html.indexOf('[', startIndex);
+          var depth = 0;
+          var jsonEnd = jsonStart;
+          for (var i = jsonStart; i < html.length; i++) {
+            if (html[i] == '[') depth++;
+            if (html[i] == ']') {
+              depth--;
+              if (depth == 0) {
+                jsonEnd = i + 1;
+                break;
+              }
+            }
+          }
+          final jsonStr = html.substring(jsonStart, jsonEnd);
+          final data = jsonDecode(jsonStr);
+          if (data is List) {
+            for (final job in data.whereType<Map>()) {
+              final map = job.map((k, v) => MapEntry(k.toString(), v));
+              final title = (map['title'] ?? '').toString().trim();
+              if (title.isEmpty) continue;
+
+              final applyLink = (map['apply'] ?? '').toString().trim();
+              final location = (map['location'] ?? '').toString().trim();
+
+              if (matchTerms.isNotEmpty) {
+                final titleLower = title.toLowerCase();
+                final exactWordMatch = matchTerms.any((kw) {
+                  final pattern = RegExp('\\b${RegExp.escape(kw.toLowerCase())}\\b');
+                  return pattern.hasMatch(titleLower) ||
+                      pattern.hasMatch(location.toLowerCase());
+                });
+                if (!exactWordMatch && !fuzzyMatch(titleLower, matchTerms)) {
+                  continue;
+                }
+              }
+
+              final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
+              if (seen.add(key)) {
+                rows.add(
+                  ScanResultRow(
+                    company: companyName,
+                    title: title,
+                    companyUrl: careerUri.toString(),
+                    applyLink: applyLink,
+                    location: location.isEmpty ? 'Not specified' : location,
+                    duration: parseDuration(title).$1,
+                    deadline: '—',
+                    source: 'PwC India Careers',
+                    error: '',
+                  ),
+                );
+              }
+            }
+          }
         }
 
         return rows;

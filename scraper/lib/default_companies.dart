@@ -42,10 +42,12 @@ const Map<String, String> defaultCompanyUrls = {
   'dYdX Trading': 'https://dydx.exchange/careers?#roles',
   'MakerDAO (Sky)': 'https://jobs.ashbyhq.com/skyecosystem',
   'Motive': 'https://gomotive.com/company/careers/jobs/',
+  'Telus': 'https://jobs.ashbyhq.com/telus-digital',
   'juspay': 'https://juspay.io/careers',
   'Morpho Labs': 'https://morpho.org/jobs/#jobs-list',
   'Gauntlet': 'https://www.gauntlet.xyz/careers#open-roles',
   'Chaos Labs': 'https://chaoslabs.xyz/careers',
+  'phonepe': 'https://www.phonepe.com/careers/job-openings/',
   'Wintermute': 'https://jobs.lever.co/wintermute-trading',
   'paytm': 'https://jobs.lever.co/paytm',
   'Jump Crypto': 'https://jumpcrypto.com/careers',
@@ -205,8 +207,7 @@ const Map<String, String> defaultCompanyUrls = {
   'amd': 'https://careers.amd.com/careers-home/jobs?country=India&page=1',
   'nvidia':
       'https://jobs.nvidia.com/careers?start=0&location=India&pid=893392565324&sort_by=distance&filter_include_remote=1&filter_job_category=research%2Cengineering%2Cit+-+information+technology&filter_work_location_option=remote',
-  'Qualcomm':
-      'https://careers.qualcomm.com/careers?query=Intern&start=0&pid=446717035053&sort_by=match',
+  'Qualcomm': 'https://careers.qualcomm.com/careers',
   'dell technology':
       'https://jobs.dell.com/en/search-jobs/India/375/2/1269750/22/79/50/2',
   'intuit': 'https://jobs.intuit.com/search-jobs',
@@ -309,8 +310,7 @@ const Map<String, String> defaultCompanyUrls = {
   'Bain':
       'https://www.bain.com/careers/find-a-role/?filters=workareas(1831447)|offices(274,275,276)|',
   'Deloitte': 'https://southasiacareers.deloitte.com/go/Deloitte-India/718244/',
-  'pwc':
-      'https://www.pwc.com/gx/en/careers/job-results.html?wdcountry=IND&wdjobsite=Global_Campus_Careers&flds=jobreqid,title,location,los,specialism,grade,industry,region,apply,jobsite,iso',
+  'pwc': 'https://www.pwc.in/careers/experienced-jobs.html',
   'EY': 'https://eyglobal.yello.co/job_boards/c1riT--B2O-KySgYWsZO1Q?locale=en',
   'Kellanova':
       'https://jobs.kellanova.com/search/?q=&sortColumn=referencedate&sortDirection=desc',
