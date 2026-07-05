@@ -43,6 +43,9 @@ const Map<String, String> defaultCompanyUrls = {
   'MakerDAO (Sky)': 'https://jobs.ashbyhq.com/skyecosystem',
   'Motive': 'https://gomotive.com/company/careers/jobs/',
   'Telus': 'https://jobs.ashbyhq.com/telus-digital',
+  'Razor pay':
+      'https://job-boards.greenhouse.io/razorpaysoftwareprivatelimited',
+  'Remitly': 'https://careers.remitly.com/job-search-results/',
   'juspay': 'https://juspay.io/careers',
   'Morpho Labs': 'https://morpho.org/jobs/#jobs-list',
   'Gauntlet': 'https://www.gauntlet.xyz/careers#open-roles',
@@ -196,6 +199,7 @@ const Map<String, String> defaultCompanyUrls = {
   'amazon':
       'https://amazon.jobs/content/en/career-programs/university?country%5B%5D=IN',
   'facebook': 'https://www.metacareers.com/jobsearch',
+  'remitly': 'https://careers.remitly.com/job-search-results/',
   'khata book': 'https://khatabook.com/hiring/',
   'netflix': 'https://explore.jobs.netflix.net/careers?domain=netflix.com',
   'ibm': 'https://careers.ibm.com/en_US/careers/OpenJobs',
@@ -208,6 +212,7 @@ const Map<String, String> defaultCompanyUrls = {
   'nvidia':
       'https://jobs.nvidia.com/careers?start=0&location=India&pid=893392565324&sort_by=distance&filter_include_remote=1&filter_job_category=research%2Cengineering%2Cit+-+information+technology&filter_work_location_option=remote',
   'Qualcomm': 'https://careers.qualcomm.com/careers',
+
   'dell technology':
       'https://jobs.dell.com/en/search-jobs/India/375/2/1269750/22/79/50/2',
   'intuit': 'https://jobs.intuit.com/search-jobs',

@@ -136,7 +136,11 @@ class ScraperService {
     );
 
     final careerHost = careerUri.host.toLowerCase();
-    if (careerHost.contains('pwc.in') ||
+    if (careerHost.contains('a16zcrypto.com') ||
+        careerHost.contains('remitly.com') ||
+        careerHost.contains('myworkdayjobs.com') ||
+        careerHost.contains('myworkdaysite.com') ||
+        careerHost.contains('pwc.in') ||
         careerHost.contains('polygon.technology') ||
         careerHost.contains('greenhouse.io') ||
         careerHost.contains('jobs.ashbyhq.com') ||
@@ -325,7 +329,9 @@ class ScraperService {
   }
 
   bool _isPrioritizedKnownApi(String loweredHost) {
-    return loweredHost.contains('pwc.in') ||
+    return loweredHost.contains('a16zcrypto.com') ||
+        loweredHost.contains('remitly.com') ||
+        loweredHost.contains('pwc.in') ||
         loweredHost.contains('polygon.technology') ||
         loweredHost.contains('phonepe.com') ||
         loweredHost.contains('phantom.com') ||
@@ -577,6 +583,16 @@ class ScraperService {
     if (originalHost.contains('pwc.in') ||
         discoveredHost.contains('pwc.in')) {
       return Uri.parse('https://www.pwc.in/careers/experienced-jobs.html');
+    }
+
+    if (originalHost.contains('remitly.com') ||
+        discoveredHost.contains('remitly.com')) {
+      return Uri.parse('https://careers.remitly.com/job-search-results/');
+    }
+
+    if (originalHost.contains('a16zcrypto.com') ||
+        discoveredHost.contains('a16zcrypto.com')) {
+      return Uri.parse('https://a16zcrypto.com/jobs/');
     }
 
     if (originalHost.contains('polygon.technology') ||
@@ -957,6 +973,224 @@ class ScraperService {
                     error: '',
                   ),
                 );
+              }
+            }
+          }
+        }
+
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (host.contains('remitly.com')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final seen = <String>{};
+        final matchTerms = keywords;
+
+        const org = 'companies/c9a5233b-7164-44d2-98df-974dcaa42789';
+        const pageSize = 100;
+        var offset = 0;
+        int? total;
+
+        while (true) {
+          final getUri = Uri.parse('https://jobsapi-google.m-cloud.io/api/job/search').replace(queryParameters: {
+            'CompanyName': org,
+            'pageSize': '$pageSize',
+            'offset': '$offset',
+          });
+
+          final response = await _client.get(
+            getUri,
+            headers: {
+              'User-Agent': userAgents[DateTime.now().millisecond % userAgents.length],
+              'Accept': 'application/json',
+            },
+          ).timeout(const Duration(seconds: 15));
+
+          if (response.statusCode != 200 || response.body.trim().isEmpty) {
+            break;
+          }
+
+          final decoded = jsonDecode(response.body);
+          if (decoded is! Map) {
+            break;
+          }
+
+          total ??= int.tryParse('${decoded['totalHits'] ?? ''}');
+          final searchResults = decoded['searchResults'] as List? ?? [];
+          if (searchResults.isEmpty) {
+            break;
+          }
+
+          for (final item in searchResults.whereType<Map>()) {
+            final job = item['job'] as Map? ?? {};
+            final map = job.map((k, v) => MapEntry(k.toString(), v));
+            final title = (map['title'] ?? '').toString().trim();
+            if (title.isEmpty) continue;
+
+            final description = (map['description'] ?? '').toString().trim();
+            final city = (map['primary_city'] ?? '').toString().trim();
+            final state = (map['primary_state'] ?? '').toString().trim();
+            final country = (map['primary_country'] ?? '').toString().trim();
+
+            if (matchTerms.isNotEmpty) {
+              final titleLower = title.toLowerCase();
+              final searchable = [
+                title,
+                description,
+                city,
+                state,
+                country,
+              ].where((v) => v.trim().isNotEmpty).join(' | ').toLowerCase();
+
+              final exactWordMatch = matchTerms.any((kw) {
+                final pattern = RegExp('\\b${RegExp.escape(kw.toLowerCase())}\\b');
+                return pattern.hasMatch(searchable);
+              });
+              if (!exactWordMatch &&
+                  !fuzzyMatch(titleLower, matchTerms) &&
+                  !fuzzyMatch(searchable, matchTerms)) {
+                continue;
+              }
+            }
+
+            final seoUrl = (map['seo_url'] ?? '').toString().trim();
+            final urlVal = (map['url'] ?? '').toString().trim();
+            final applyLink = urlVal.isNotEmpty ? urlVal : (seoUrl.isNotEmpty ? seoUrl : careerUri.toString());
+
+            final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
+            if (seen.add(key)) {
+              final locationParts = [city, state, country].where((v) => v.isNotEmpty).toList();
+              final location = locationParts.isEmpty ? 'Not specified' : locationParts.join(', ');
+
+              rows.add(
+                ScanResultRow(
+                  company: companyName,
+                  title: title,
+                  companyUrl: careerUri.toString(),
+                  applyLink: applyLink,
+                  location: location,
+                  duration: parseDuration(description).$1,
+                  deadline: '—',
+                  source: 'Google Cloud Jobs API',
+                  error: '',
+                ),
+              );
+            }
+          }
+
+          offset += searchResults.length;
+          if (total != null && offset >= total) {
+            break;
+          }
+          if (searchResults.length < pageSize) {
+            break;
+          }
+        }
+
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (host.contains('a16zcrypto.com')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final seen = <String>{};
+        final matchTerms = keywords;
+
+        final resp = await _client.get(
+          careerUri,
+          headers: {
+            'User-Agent': userAgents[DateTime.now().millisecond % userAgents.length],
+          },
+        ).timeout(const Duration(seconds: 15));
+
+        if (resp.statusCode != 200 || resp.body.trim().isEmpty) {
+          return const [];
+        }
+
+        final html = resp.body;
+        const marker = 'const portfolioJobs =';
+        final startIndex = html.indexOf(marker);
+        if (startIndex >= 0) {
+          final jsonStart = html.indexOf('[', startIndex);
+          var depth = 0;
+          var jsonEnd = jsonStart;
+          for (var i = jsonStart; i < html.length; i++) {
+            if (html[i] == '[') depth++;
+            if (html[i] == ']') {
+              depth--;
+              if (depth == 0) {
+                jsonEnd = i + 1;
+                break;
+              }
+            }
+          }
+          final jsonStr = html.substring(jsonStart, jsonEnd);
+          final data = jsonDecode(jsonStr);
+          if (data is List) {
+            for (final comp in data.whereType<Map>()) {
+              final compName = (comp['company'] ?? '').toString().trim();
+              final jobs = comp['jobs'] as List? ?? [];
+              for (final job in jobs.whereType<Map>()) {
+                final map = job.map((k, v) => MapEntry(k.toString(), v));
+                final title = (map['title'] ?? '').toString().trim();
+                if (title.isEmpty) continue;
+
+                final applyLink = (map['url'] ?? '').toString().trim();
+                final locs = map['locations'] as List? ?? [];
+                final isRemote = map['remote'] == true;
+
+                final locParts = locs.map((e) => e.toString().trim()).where((s) => s.isNotEmpty).toList();
+                var location = locParts.isEmpty ? 'Not specified' : locParts.join(', ');
+                if (isRemote) {
+                  if (location == 'Not specified') {
+                    location = 'Remote';
+                  } else if (!location.toLowerCase().contains('remote')) {
+                    location = '$location (Remote)';
+                  }
+                }
+
+                if (matchTerms.isNotEmpty) {
+                  final titleLower = title.toLowerCase();
+                  final searchable = [
+                    title,
+                    compName,
+                    location,
+                  ].where((v) => v.trim().isNotEmpty).join(' | ').toLowerCase();
+
+                  final exactWordMatch = matchTerms.any((kw) {
+                    final pattern = RegExp('\\b${RegExp.escape(kw.toLowerCase())}\\b');
+                    return pattern.hasMatch(searchable);
+                  });
+                  if (!exactWordMatch &&
+                      !fuzzyMatch(titleLower, matchTerms) &&
+                      !fuzzyMatch(searchable, matchTerms)) {
+                    continue;
+                  }
+                }
+
+                final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
+                if (seen.add(key)) {
+                  rows.add(
+                    ScanResultRow(
+                      company: compName.isEmpty ? companyName : compName,
+                      title: title,
+                      companyUrl: careerUri.toString(),
+                      applyLink: applyLink.isEmpty ? careerUri.toString() : applyLink,
+                      location: location,
+                      duration: parseDuration(title).$1,
+                      deadline: '—',
+                      source: 'a16z Crypto Jobs',
+                      error: '',
+                    ),
+                  );
+                }
               }
             }
           }
@@ -12761,12 +12995,45 @@ class ScraperService {
         final seen = <String>{};
 
         final countryFilters = <String>[];
+        final iso2ToIso3 = {
+          'IN': 'IND',
+          'US': 'USA',
+          'GB': 'GBR',
+          'CA': 'CAN',
+          'AU': 'AUS',
+          'DE': 'DEU',
+          'FR': 'FRA',
+          'JP': 'JPN',
+          'BR': 'BRA',
+          'CN': 'CHN',
+          'SG': 'SGP',
+          'MY': 'MYS',
+          'PH': 'PHL',
+          'NL': 'NLD',
+          'ES': 'ESP',
+          'IT': 'ITA',
+          'CH': 'CHE',
+          'SE': 'SWE',
+          'NO': 'NOR',
+          'FI': 'FIN',
+          'DK': 'DNK',
+          'IE': 'IRL',
+          'NZ': 'NZL',
+        };
+
         for (final entry in careerUri.queryParametersAll.entries) {
-          if (entry.key.toLowerCase() == 'country[]') {
+          final key = entry.key.toLowerCase();
+          if (key.contains('country') || key.contains('normalized_country_code')) {
             for (final v in entry.value) {
-              final trimmed = v.trim();
-              if (trimmed.isNotEmpty) {
-                countryFilters.add(trimmed);
+              var val = v.trim().toUpperCase();
+              if (val.length == 2) {
+                final mapped = iso2ToIso3[val];
+                if (mapped != null) {
+                  val = mapped;
+                }
+              }
+              if (val.isNotEmpty) {
+                countryFilters.add(val);
               }
             }
           }
@@ -12785,7 +13052,7 @@ class ScraperService {
               'result_limit': '$limit',
             };
             if (countryFilters.isNotEmpty) {
-              qp['country[]'] = countryFilters;
+              qp['normalized_country_code[]'] = countryFilters;
             }
 
             final uri = Uri.https('www.amazon.jobs', '/en/search.json', qp);
