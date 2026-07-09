@@ -63,3 +63,48 @@ List<T> takeRandom<T>(List<T> items, int maxCount) {
   final copy = List<T>.from(items)..shuffle(rand);
   return copy.take(maxCount).toList();
 }
+
+String parseExperience(String text) {
+  if (text.isEmpty) return '—';
+
+  // Clean HTML tags first to get clean text
+  final cleanText = text.replaceAll(RegExp(r'<[^>]*>'), ' ').replaceAll(RegExp(r'\s+'), ' ');
+
+  final regex = RegExp(
+    r'\b(\d+)\s*(?:\+|plus|to|-|\s)*\s*(\d+)?\s*(?:years?|yrs?)\b',
+    caseSensitive: false,
+  );
+
+  final matches = regex.allMatches(cleanText);
+  for (final match in matches) {
+    final firstNum = match.group(1);
+    final secondNum = match.group(2);
+    final fullMatchStr = match.group(0)!.toLowerCase();
+
+    // Check context for age restrictions (e.g. 18 years or older)
+    final idx = cleanText.indexOf(match.group(0)!);
+    final start = idx > 25 ? idx - 25 : 0;
+    final end = idx + fullMatchStr.length + 25 < cleanText.length ? idx + fullMatchStr.length + 25 : cleanText.length;
+    final context = cleanText.substring(start, end).toLowerCase();
+
+    if (context.contains('or older') ||
+        context.contains('of age') ||
+        context.contains('age of') ||
+        context.contains('at least 18') ||
+        context.contains('at least 21') ||
+        context.contains('age limit')) {
+      continue; // Skip age qualifications
+    }
+
+    final suffix = (firstNum == '1' && secondNum == null) ? 'year' : 'years';
+    if (secondNum != null) {
+      return '$firstNum-$secondNum $suffix';
+    } else if (fullMatchStr.contains('+') || fullMatchStr.contains('plus')) {
+      return '$firstNum+ $suffix';
+    } else {
+      return '$firstNum $suffix';
+    }
+  }
+
+  return '—';
+}

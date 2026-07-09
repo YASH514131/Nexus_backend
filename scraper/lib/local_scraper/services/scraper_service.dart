@@ -875,6 +875,9 @@ class ScraperService {
             if (seen.add(key)) {
               final empType = (map['employment_type'] ?? '').toString().trim();
               final duration = empType.isNotEmpty ? empType : parseDuration(title).$1;
+              final quals = (map['qualifications'] ?? '').toString().trim();
+              final desc = (map['description'] ?? '').toString().trim();
+              final exp = parseExperience(quals.isNotEmpty ? quals : desc);
               rows.add(
                 ScanResultRow(
                   company: companyName,
@@ -886,6 +889,7 @@ class ScraperService {
                   deadline: '—',
                   source: 'PepsiCo Careers',
                   error: '',
+                  experience: exp,
                 ),
               );
             }
@@ -960,6 +964,7 @@ class ScraperService {
 
               final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
               if (seen.add(key)) {
+                final exp = parseExperience(title);
                 rows.add(
                   ScanResultRow(
                     company: companyName,
@@ -971,6 +976,7 @@ class ScraperService {
                     deadline: '—',
                     source: 'PwC India Careers',
                     error: '',
+                    experience: exp,
                   ),
                 );
               }
@@ -1066,6 +1072,7 @@ class ScraperService {
               final locationParts = [city, state, country].where((v) => v.isNotEmpty).toList();
               final location = locationParts.isEmpty ? 'Not specified' : locationParts.join(', ');
 
+              final exp = parseExperience(description);
               rows.add(
                 ScanResultRow(
                   company: companyName,
@@ -1077,6 +1084,7 @@ class ScraperService {
                   deadline: '—',
                   source: 'Google Cloud Jobs API',
                   error: '',
+                  experience: exp,
                 ),
               );
             }
@@ -1177,6 +1185,23 @@ class ScraperService {
 
                 final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
                 if (seen.add(key)) {
+                  final yearsExp = map['yearsExperience'] as Map?;
+                  var exp = '—';
+                  if (yearsExp != null) {
+                    final min = yearsExp['min'];
+                    final max = yearsExp['max'];
+                    if (min != null && max != null) {
+                      exp = '$min-$max years';
+                    } else if (min != null) {
+                      exp = '$min+ years';
+                    } else if (max != null) {
+                      exp = 'Up to $max years';
+                    }
+                  }
+                  if (exp == '—') {
+                    exp = parseExperience(title);
+                  }
+
                   rows.add(
                     ScanResultRow(
                       company: compName.isEmpty ? companyName : compName,
@@ -1188,6 +1213,7 @@ class ScraperService {
                       deadline: '—',
                       source: 'a16z Crypto Jobs',
                       error: '',
+                      experience: exp,
                     ),
                   );
                 }
@@ -1267,6 +1293,7 @@ class ScraperService {
             final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
             if (seen.add(key)) {
               final durationData = parseDuration(title);
+              final exp = parseExperience(title);
               rows.add(
                 ScanResultRow(
                   company: comp,
@@ -1278,6 +1305,7 @@ class ScraperService {
                   deadline: '—',
                   source: 'Paradigm Careers',
                   error: '',
+                  experience: exp,
                 ),
               );
             }
@@ -1347,6 +1375,15 @@ class ScraperService {
               if (seen.add(key)) {
                 final isContract = map['contractor'] == true;
                 final duration = isContract ? 'Contract' : parseDuration(title).$1;
+                final minYears = map['minYearsExp'];
+                var exp = '—';
+                if (minYears is num) {
+                  final suffix = minYears == 1 ? 'year' : 'years';
+                  exp = '$minYears+ $suffix';
+                } else {
+                  exp = parseExperience(title);
+                }
+
                 rows.add(
                   ScanResultRow(
                     company: comp,
@@ -1358,6 +1395,7 @@ class ScraperService {
                     deadline: '—',
                     source: 'Pantera Capital Jobs',
                     error: '',
+                    experience: exp,
                   ),
                 );
               }
@@ -1490,6 +1528,7 @@ class ScraperService {
               final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
               if (seen.add(key)) {
                 final durationData = parseDuration(fullDesc);
+                final exp = parseExperience(fullDesc);
                 rows.add(
                   ScanResultRow(
                     company: companyName,
@@ -1501,6 +1540,7 @@ class ScraperService {
                     deadline: '—',
                     source: host.contains('orange.jobs') ? 'Orange Jobs' : 'P&G Careers',
                     error: '',
+                    experience: exp,
                   ),
                 );
               }
@@ -1567,6 +1607,8 @@ class ScraperService {
             final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
             if (!seen.contains(key)) {
               seen.add(key);
+              final description = (pos['description'] ?? pos['job_description'] ?? pos['name'] ?? '').toString();
+              final exp = parseExperience(description);
               rows.add(ScanResultRow(
                 company: companyName,
                 title: title,
@@ -1577,6 +1619,7 @@ class ScraperService {
                 deadline: '—',
                 source: 'Netflix Careers (Eightfold API)',
                 error: '',
+                experience: exp,
               ));
             }
           }
@@ -1653,6 +1696,7 @@ class ScraperService {
             location = (loc['name'] as String? ?? 'See listing').trim();
           }
 
+          final exp = parseExperience(title);
           rows.add(ScanResultRow(
             company: companyName,
             title: title,
@@ -1663,6 +1707,7 @@ class ScraperService {
             deadline: '—',
             source: 'Gem Job Board (GraphQL API)',
             error: '',
+            experience: exp,
           ));
         }
 
@@ -1706,6 +1751,7 @@ class ScraperService {
             location = location.replaceAll(RegExp(r'<[^>]*>'), '').trim();
           }
 
+          final exp = parseExperience(contentStr);
           rows.add(ScanResultRow(
             company: companyName,
             title: title,
@@ -1716,6 +1762,7 @@ class ScraperService {
             deadline: '—',
             source: 'Niramai Careers (WP API)',
             error: '',
+            experience: exp,
           ));
         }
 
@@ -1765,11 +1812,12 @@ class ScraperService {
           final externalPath = (job['externalPath'] as String? ?? '').trim();
           if (title.isEmpty || externalPath.isEmpty) return;
 
-          final applyLink = 'https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite$externalPath';
+          final applyLink = 'https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite$externalPath';
           final location = (job['locationsText'] as String? ?? 'See listing').trim();
 
           if (!seen.contains(applyLink)) {
             seen.add(applyLink);
+            final exp = parseExperience(title);
             rows.add(ScanResultRow(
               company: companyName,
               title: title,
@@ -1780,6 +1828,7 @@ class ScraperService {
               deadline: '—',
               source: 'NVIDIA Careers (Workday API)',
               error: '',
+              experience: exp,
             ));
           }
         }
@@ -1891,6 +1940,7 @@ class ScraperService {
                   .join(' ');
             }
 
+            final exp = parseExperience(title);
             rows.add(ScanResultRow(
               company: companyName,
               title: title,
@@ -1901,6 +1951,7 @@ class ScraperService {
               deadline: '—',
               source: 'Novartis Careers Sitemap',
               error: '',
+              experience: exp,
             ));
           }
         }
@@ -1974,6 +2025,7 @@ class ScraperService {
                   final key = '${title.toLowerCase()}|${u.toLowerCase()}';
                   if (!seen.contains(key)) {
                     seen.add(key);
+                    final exp = parseExperience(title);
                     rows.add(
                       ScanResultRow(
                         company: companyName,
@@ -1985,6 +2037,7 @@ class ScraperService {
                         deadline: '—',
                         source: 'Nestle Careers Sitemap',
                         error: '',
+                        experience: exp,
                       ),
                     );
                   }
@@ -2132,6 +2185,7 @@ class ScraperService {
             final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
             if (!seen.contains(key)) {
               seen.add(key);
+              final exp = parseExperience(teaser);
               rows.add(
                 ScanResultRow(
                   company: companyName,
@@ -2143,6 +2197,7 @@ class ScraperService {
                   deadline: '—',
                   source: '$companyName Phenom People API',
                   error: '',
+                  experience: exp,
                 ),
               );
             }
@@ -2309,6 +2364,8 @@ class ScraperService {
           if (seen.contains(key)) continue;
           seen.add(key);
 
+          final expField = map['experience_required'] ?? map['experience'] ?? '';
+          final exp = parseExperience('$expField $title');
           rows.add(
             ScanResultRow(
               company: companyName,
@@ -2320,6 +2377,7 @@ class ScraperService {
               deadline: '—',
               source: 'M2P Careers API',
               error: '',
+              experience: exp,
             ),
           );
         }
@@ -2452,6 +2510,7 @@ class ScraperService {
                             : 'Not specified';
                         final durationData = parseDuration(description);
 
+                        final exp = parseExperience(description);
                         rows.add(
                           ScanResultRow(
                             company: companyName,
@@ -2463,6 +2522,7 @@ class ScraperService {
                             deadline: '—',
                             source: 'Accenture API (Randomized Scan)',
                             error: '',
+                            experience: exp,
                           ),
                         );
                       }
@@ -2488,7 +2548,6 @@ class ScraperService {
       try {
         final rows = <ScanResultRow>[];
         final seen = <String>{};
-        final matchTerms = keywords;
         final query = keywords.isEmpty ? '' : keywords.join(' ');
 
         final apiUri = Uri(
@@ -2533,6 +2592,7 @@ class ScraperService {
                 final location = item['locationsText'] ?? 'Not specified';
                 final postedOn = item['postedOn'] ?? '—';
 
+                final exp = parseExperience(title);
                 rows.add(
                   ScanResultRow(
                     company: companyName,
@@ -2544,6 +2604,7 @@ class ScraperService {
                     deadline: '—',
                     source: 'Workday CXS API',
                     error: '',
+                    experience: exp,
                   ),
                 );
               }
@@ -2615,7 +2676,6 @@ class ScraperService {
       try {
         final rows = <ScanResultRow>[];
         final seen = <String>{};
-        final matchTerms = keywords;
         final query = keywords.isEmpty ? 'software' : keywords.first;
 
         const maxPages = 35;
@@ -2673,6 +2733,7 @@ class ScraperService {
                               .trim() ??
                           'Not specified';
 
+                      final exp = parseExperience(title);
                       rows.add(
                         ScanResultRow(
                           company: companyName,
@@ -2684,6 +2745,7 @@ class ScraperService {
                           deadline: '—',
                           source: 'Intuit HTML Scan',
                           error: '',
+                          experience: exp,
                         ),
                       );
                     }
@@ -2758,6 +2820,7 @@ class ScraperService {
                           jobCard?.querySelector('address')?.text.trim() ??
                           'Not specified';
 
+                      final exp = parseExperience(title);
                       rows.add(
                         ScanResultRow(
                           company: companyName,
@@ -2769,6 +2832,7 @@ class ScraperService {
                           deadline: '—',
                           source: 'J&J HTML Scan',
                           error: '',
+                          experience: exp,
                         ),
                       );
                     }
@@ -2829,6 +2893,7 @@ class ScraperService {
                   location = t;
                 }
               }
+              final exp = parseExperience(title);
               rows.add(
                 ScanResultRow(
                   company: companyName,
@@ -2840,6 +2905,7 @@ class ScraperService {
                   deadline: '—',
                   source: 'MyJar HTML Scan',
                   error: '',
+                  experience: exp,
                 ),
               );
             }
@@ -2864,6 +2930,7 @@ class ScraperService {
                       ?.text
                       .trim() ??
                   'Not specified';
+              final exp = parseExperience(title);
               rows.add(
                 ScanResultRow(
                   company: companyName,
@@ -2875,12 +2942,130 @@ class ScraperService {
                   deadline: '—',
                   source: 'JazzHR HTML Scan',
                   error: '',
+                  experience: exp,
                 ),
               );
             }
           }
         }
         return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (host.contains('ripple.com')) {
+      try {
+        final apiUri = Uri.parse(
+          'https://boards-api.greenhouse.io/v1/boards/ripple/jobs?content=true',
+        );
+        final response = await _client
+            .get(apiUri)
+            .timeout(const Duration(seconds: 15));
+
+        if (response.statusCode == 200) {
+          final decoded = jsonDecode(response.body);
+          if (decoded is Map && decoded['jobs'] is List) {
+            final rows = <ScanResultRow>[];
+            for (final item in (decoded['jobs'] as List).whereType<Map>()) {
+              final title = (item['title'] ?? '').toString().trim();
+              if (title.isEmpty) continue;
+
+              final applyLink = (item['absolute_url'] ?? '').toString().trim();
+              final location = (item['location']?['name'] ?? 'Not specified')
+                  .toString()
+                  .trim();
+
+              final exp = parseExperience(title);
+
+              rows.add(
+                ScanResultRow(
+                  company: companyName,
+                  title: title,
+                  companyUrl: careerUri.toString(),
+                  applyLink: applyLink,
+                  location: location,
+                  duration: '—',
+                  deadline: '—',
+                  source: 'Greenhouse API',
+                  error: '',
+                  experience: exp,
+                ),
+              );
+            }
+            return rows;
+          }
+        }
+        return const [];
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (host.contains('revolut.com')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final seen = <String>{};
+        final response = await _client.get(
+          Uri.parse('https://www.revolut.com/careers/'),
+        ).timeout(const Duration(seconds: 15));
+
+        if (response.statusCode == 200) {
+          final document = html_parser.parse(response.body);
+          final scriptTag = document.querySelector('#__NEXT_DATA__');
+          if (scriptTag != null) {
+            final jsonData = jsonDecode(scriptTag.text);
+            final pageProps = jsonData['props']?['pageProps'];
+            if (pageProps != null && pageProps.containsKey('positions')) {
+              final positions = pageProps['positions'];
+              if (positions is List) {
+                for (final job in positions) {
+                  if (job is Map<String, dynamic>) {
+                    final title = (job['text'] ?? '').toString().trim();
+                    final jobId = (job['id'] ?? '').toString().trim();
+                    if (title.isEmpty || jobId.isEmpty) continue;
+                    
+                    final applyLink = 'https://www.revolut.com/careers/position/$jobId';
+                    final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
+                    
+                    if (!seen.contains(key)) {
+                      seen.add(key);
+                      
+                      String location = 'Not specified';
+                      final locs = job['locations'];
+                      if (locs is List && locs.isNotEmpty) {
+                        final locNames = locs.map((l) {
+                          if (l is Map) return (l['name'] ?? '').toString().trim();
+                          return '';
+                        }).where((l) => l.isNotEmpty).toList();
+                        if (locNames.isNotEmpty) location = locNames.join(', ');
+                      }
+                      
+                      final exp = parseExperience(title);
+                      
+                      rows.add(
+                        ScanResultRow(
+                          company: companyName,
+                          title: title,
+                          companyUrl: careerUri.toString(),
+                          applyLink: applyLink,
+                          location: location,
+                          duration: '—',
+                          deadline: '—',
+                          source: 'Revolut SSR (Next.js)',
+                          error: '',
+                          experience: exp,
+                        ),
+                      );
+                    }
+                  }
+                }
+                return rows;
+              }
+            }
+          }
+        }
+        return const [];
       } catch (_) {
         return const [];
       }
@@ -7175,6 +7360,7 @@ class ScraperService {
               if (seen.contains(key)) continue;
               seen.add(key);
 
+              final exp = parseExperience(title);
               rows.add(
                 ScanResultRow(
                   company: companyName,
@@ -7186,6 +7372,7 @@ class ScraperService {
                   deadline: '—',
                   source: 'Workday CXS Jobs API',
                   error: '',
+                  experience: exp,
                 ),
               );
             }
@@ -12447,6 +12634,8 @@ class ScraperService {
             }
           }
 
+          final exp = parseExperience(description);
+
           rows.add(
             ScanResultRow(
               company: companyName,
@@ -12458,6 +12647,7 @@ class ScraperService {
               deadline: '—',
               source: 'Lever Postings API',
               error: '',
+              experience: exp,
             ),
           );
         }
@@ -13122,6 +13312,11 @@ class ScraperService {
                       .toString()
                       .trim();
 
+              final basicQuals = (map['basic_qualifications'] ?? '').toString().trim();
+              final prefQuals = (map['preferred_qualifications'] ?? '').toString().trim();
+              final fullText = '$basicQuals\n$prefQuals\n$description';
+              final exp = parseExperience(fullText);
+
               rows.add(
                 ScanResultRow(
                   company: companyName,
@@ -13133,6 +13328,7 @@ class ScraperService {
                   deadline: '—',
                   source: 'Amazon Search JSON',
                   error: '',
+                  experience: exp,
                 ),
               );
             }
@@ -13393,6 +13589,7 @@ class ScraperService {
             }
           }
 
+          final exp = parseExperience(content);
           rows.add(
             ScanResultRow(
               company: companyName,
@@ -13404,6 +13601,7 @@ class ScraperService {
               deadline: '—',
               source: 'Greenhouse API',
               error: '',
+              experience: exp,
             ),
           );
         }
@@ -13868,6 +14066,7 @@ query ApiJobBoardWithTeams($organizationHostedJobsPageName: String!) {
       if (seen.contains(key)) continue;
       seen.add(key);
 
+      final exp = parseExperience(description);
       rows.add(
         ScanResultRow(
           company: companyName,
@@ -13879,6 +14078,7 @@ query ApiJobBoardWithTeams($organizationHostedJobsPageName: String!) {
           deadline: '—',
           source: 'Ashby API',
           error: '',
+          experience: exp,
         ),
       );
     }

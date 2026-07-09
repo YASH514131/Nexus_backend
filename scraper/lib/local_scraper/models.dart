@@ -102,6 +102,7 @@ class ScanResultRow {
     required this.deadline,
     required this.source,
     required this.error,
+    this.experience = '—',
   });
 
   final String company;
@@ -113,6 +114,7 @@ class ScanResultRow {
   final String deadline;
   final String source;
   final String error;
+  final String experience;
 
   ResultBucket get bucket {
     if (error.trim().isNotEmpty) return ResultBucket.error;
@@ -131,6 +133,7 @@ class ScanResultRow {
     'deadline': deadline,
     'source': source,
     'error': error,
+    'experience': experience,
     'bucket': bucket.name,
   };
 }
