@@ -95,6 +95,7 @@ const Map<String, String> defaultCompanyUrls = {
   'Ripple': 'https://ripple.com/careers/all-jobs/',
   'Gemini': 'https://www.gemini.com/careers#open-roles',
   'Robinhood': 'https://careers.robinhood.com/',
+  'Roche': 'https://careers.roche.com/global/en/c/information-technology-jobs',
   'Adyen': 'https://careers.adyen.com/vacancies?locale=en',
   'Aeon': 'https://aeonsoftware.net/careers/',
   'Leap Finance': 'https://careers.leapfinance.com/#openings',

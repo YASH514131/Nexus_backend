@@ -2056,7 +2056,8 @@ class ScraperService {
     if (host.contains('careers.mars.com') ||
         host.contains('mars.com') ||
         host.contains('careers.mastercard.com') ||
-        host.contains('mastercard.com')) {
+        host.contains('mastercard.com') ||
+        host.contains('roche.com')) {
       try {
         final rows = <ScanResultRow>[];
         final seen = <String>{};
@@ -2114,8 +2115,12 @@ class ScraperService {
 
             if (response.statusCode == 200) {
               return jsonDecode(response.body);
+            } else {
+              print('Phenom fetchOffset(\$offset) failed with \${response.statusCode}');
             }
-          } catch (_) {}
+          } catch (e) {
+            print('Phenom fetchOffset(\$offset) exception: \$e');
+          }
           return null;
         }
 
@@ -2221,7 +2226,7 @@ class ScraperService {
                   (i) => (i + 1) * pageSize,
                 );
 
-                const batchSize = 10;
+                const batchSize = 3;
                 for (var i = 0; i < offsets.length; i += batchSize) {
                   final chunk = offsets.sublist(
                     i,
@@ -2244,6 +2249,7 @@ class ScraperService {
                       }
                     }),
                   );
+                  await Future.delayed(const Duration(milliseconds: 300));
                 }
               }
             }
@@ -2949,6 +2955,54 @@ class ScraperService {
           }
         }
         return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (host.contains('robinhood.com')) {
+      try {
+        final apiUri = Uri.parse(
+          'https://boards-api.greenhouse.io/v1/boards/robinhood/jobs?content=true',
+        );
+        final response = await _client
+            .get(apiUri)
+            .timeout(const Duration(seconds: 15));
+
+        if (response.statusCode == 200) {
+          final decoded = jsonDecode(response.body);
+          if (decoded is Map && decoded['jobs'] is List) {
+            final rows = <ScanResultRow>[];
+            for (final item in (decoded['jobs'] as List).whereType<Map>()) {
+              final title = (item['title'] ?? '').toString().trim();
+              if (title.isEmpty) continue;
+
+              final applyLink = (item['absolute_url'] ?? '').toString().trim();
+              final location = (item['location']?['name'] ?? 'Not specified')
+                  .toString()
+                  .trim();
+
+              final exp = parseExperience(title);
+
+              rows.add(
+                ScanResultRow(
+                  company: companyName,
+                  title: title,
+                  companyUrl: careerUri.toString(),
+                  applyLink: applyLink,
+                  location: location,
+                  duration: '—',
+                  deadline: '—',
+                  source: 'Greenhouse API',
+                  error: '',
+                  experience: exp,
+                ),
+              );
+            }
+            return rows;
+          }
+        }
+        return const [];
       } catch (_) {
         return const [];
       }
