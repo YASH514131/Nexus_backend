@@ -167,6 +167,7 @@ class ScraperService {
         careerHost.contains('nvidia.com') ||
         careerHost.contains('niramai.com') ||
         careerHost.contains('gem.com') ||
+        careerHost.contains('salesforce.com') ||
         careerHost.contains('near.foundation')) {
       final apiRows = await _fetchKnownJsonApiRows(
         companyName: company.name,
@@ -613,6 +614,16 @@ class ScraperService {
     if (originalHost.contains('paradigm.xyz') ||
         discoveredHost.contains('paradigm.xyz')) {
       return Uri.parse('https://www.paradigm.xyz/careers');
+    }
+
+    if (originalHost.contains('salesforce.com') ||
+        discoveredHost.contains('salesforce.com')) {
+      return Uri.parse('https://salesforce.wd12.myworkdayjobs.com/External_Career_Site');
+    }
+
+    if (originalHost.contains('securitize.io') ||
+        discoveredHost.contains('securitize.io')) {
+      return Uri.parse('https://boards.greenhouse.io/securitize');
     }
 
     if (originalHost.contains('paxos.com') ||
@@ -2546,9 +2557,12 @@ class ScraperService {
       }
     }
 
-    // Handle Intel specifically or any Workday-based site
+    // Handle Intel, Samsung, Sanofi specifically, or any Workday-based site
     final workday = extractWorkdayTenantAndSite(careerUri);
-    if (host.contains('intel.wd1.myworkdayjobs.com') || workday != null) {
+    if (host.contains('intel.wd1.myworkdayjobs.com') || 
+        host.contains('sec.wd3.myworkdayjobs.com') || 
+        host.contains('sanofi.wd3.myworkdayjobs.com') ||
+        workday != null) {
       final tenant = workday?.tenant ?? 'intel';
       final site = workday?.site ?? 'External';
       try {
@@ -3123,6 +3137,123 @@ class ScraperService {
       } catch (_) {
         return const [];
       }
+    }
+
+    if (host.contains('rupeek.com')) {
+      try {
+        final response = await _client.get(careerUri).timeout(const Duration(seconds: 15));
+        if (response.statusCode == 200) {
+          final html = response.body;
+          final cleanHtml = html.replaceAll(r'\"', '"').replaceAll(r'\\"', '"');
+          final parts = cleanHtml.split('https://www.linkedin.com/jobs/view/');
+          final seen = <String>{};
+          final rows = <ScanResultRow>[];
+          
+          for (int i = 1; i < parts.length; i++) {
+            final part = parts[i];
+            final urlEnd = part.indexOf('"');
+            if (urlEnd == -1) continue;
+            
+            final urlSlug = part.substring(0, urlEnd);
+            final applyLink = 'https://www.linkedin.com/jobs/view/$urlSlug';
+            if (seen.contains(applyLink)) continue;
+            seen.add(applyLink);
+            
+            String title = '';
+            if (urlSlug.contains('-at-')) {
+              final rawTitle = urlSlug.split('-at-').first;
+              title = rawTitle.replaceAll('-', ' ').split(' ').map((s) => s.isNotEmpty ? '${s[0].toUpperCase()}${s.substring(1)}' : '').join(' ');
+            } else {
+              title = urlSlug;
+            }
+            if (title.isEmpty) continue;
+            
+            final exp = parseExperience(title);
+            
+            rows.add(
+              ScanResultRow(
+                company: companyName,
+                title: title,
+                companyUrl: careerUri.toString(),
+                applyLink: applyLink,
+                location: 'India',
+                duration: '—',
+                deadline: '—',
+                source: 'Rupeek (Next.js)',
+                error: '',
+                experience: exp,
+              ),
+            );
+          }
+          return rows;
+        }
+      } catch (_) {
+        return const [];
+      }
+      return const [];
+    }
+
+    if (host.contains('personio.com') || host.contains('personio.de')) {
+      try {
+        final xmlUri = Uri.parse('https://${careerUri.host}/xml');
+        final response = await _client.get(xmlUri).timeout(const Duration(seconds: 15));
+        if (response.statusCode == 200) {
+          final xml = response.body;
+          final regex = RegExp(r'<position>.*?</position>', dotAll: true);
+          final idRegex = RegExp(r'<id>(.*?)</id>');
+          final nameRegex = RegExp(r'<name>(.*?)</name>');
+          final officeRegex = RegExp(r'<office>(.*?)</office>');
+          final expRegex = RegExp(r'<yearsOfExperience>(.*?)</yearsOfExperience>');
+          
+          final rows = <ScanResultRow>[];
+          final matches = regex.allMatches(xml);
+          
+          for (var match in matches) {
+            final block = match.group(0)!;
+            final id = idRegex.firstMatch(block)?.group(1)?.trim() ?? '';
+            var title = nameRegex.firstMatch(block)?.group(1)?.trim() ?? '';
+            // Remove CDATA if present
+            title = title.replaceAll('<![CDATA[', '').replaceAll(']]>', '');
+            
+            final office = officeRegex.firstMatch(block)?.group(1)?.trim() ?? 'Not specified';
+            final expYears = expRegex.firstMatch(block)?.group(1)?.trim() ?? '';
+            
+            if (id.isEmpty || title.isEmpty) continue;
+            
+            final applyLink = 'https://${careerUri.host}/job/$id';
+            
+            var exp = parseExperience(title);
+            if (exp == '—' && expYears.isNotEmpty) {
+              if (expYears.toLowerCase().contains('entry') || expYears.contains('< 1') || expYears.contains('0-')) {
+                exp = 'Entry Level';
+              } else if (expYears.contains('senior') || expYears.contains('5')) {
+                exp = 'Senior Level';
+              } else {
+                exp = 'Mid Level';
+              }
+            }
+            
+            rows.add(
+              ScanResultRow(
+                company: companyName,
+                title: title,
+                companyUrl: careerUri.toString(),
+                applyLink: applyLink,
+                location: office,
+                duration: '—',
+                deadline: '—',
+                source: 'Personio XML',
+                error: '',
+                experience: exp,
+              ),
+            );
+          }
+          return rows;
+        }
+      } catch (_) {
+        return const [];
+      }
+      return const [];
     }
 
     if (host.contains('jumpcrypto.com')) {

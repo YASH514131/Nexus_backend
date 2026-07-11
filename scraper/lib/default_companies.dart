@@ -96,6 +96,8 @@ const Map<String, String> defaultCompanyUrls = {
   'Gemini': 'https://www.gemini.com/careers#open-roles',
   'Robinhood': 'https://careers.robinhood.com/',
   'Roche': 'https://careers.roche.com/global/en/c/information-technology-jobs',
+  'Rupeek': 'https://rupeek.com/careers',
+  'Safe Labs': 'https://safe-labs.jobs.personio.com/',
   'Adyen': 'https://careers.adyen.com/vacancies?locale=en',
   'Aeon': 'https://aeonsoftware.net/careers/',
   'Leap Finance': 'https://careers.leapfinance.com/#openings',
@@ -222,8 +224,8 @@ const Map<String, String> defaultCompanyUrls = {
       'https://jobs.lenovo.com/en_US/careers/SearchJobs/?13036=%5B12016672%5D&13036_format=6621&listFilterMode=1&jobRecordsPerPage=10&',
   'Sony':
       'https://www.linkedin.com/jobs/search/?currentJobId=4378325278&f_C=30991062&geoId=92000000&origin=COMPANY_PAGE_JOBS_CLUSTER_EXPANSION&originToLandingJobPostings=4378325278%2C4378326285%2C4384586139%2C4378325558%2C4368495659%2C4378366273',
-  'samsung':
-      'https://sec.wd3.myworkdayjobs.com/en-US/Samsung_Careers?locations=189767dd6c9201b802603c83a5292c78&Location_Country=c4f78be1a8f14da0ab49ce1162348a5e&hiringCompany=189767dd6c9201554f3e5312a7290a85',
+  'samsung': 'https://sec.wd3.myworkdayjobs.com/en-US/Samsung_Careers',
+  'Sanofi': 'https://sanofi.wd3.myworkdayjobs.com/SanofiCareers',
   'LG electronics': 'https://globalcareers.lge.com/jobs',
   'M2P Fintech': 'https://careers.m2pfintech.com/view-jobs/',
   'Locus': 'https://locus.freshteam.com/jobs',
