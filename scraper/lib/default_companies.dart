@@ -102,7 +102,6 @@ const Map<String, String> defaultCompanyUrls = {
   'Aeon': 'https://aeonsoftware.net/careers/',
   'Leap Finance': 'https://careers.leapfinance.com/#openings',
   'Acko': 'https://www.acko.com/careers/jobs/',
-  'Stripe': 'https://stripe.com/in/jobs',
   'PayPal': 'https://careers.pypl.com/home/',
   'Block (Square)': 'https://block.xyz/careers/jobs',
   'Bitpanda': 'https://job-boards.eu.greenhouse.io/bitpanda',
@@ -236,6 +235,7 @@ const Map<String, String> defaultCompanyUrls = {
       'https://jobs.standardchartered.com/go/Early-careers-Jobs/9783557/?&feedid=363857',
   'Starbucks':
       'https://starbucks.eightfold.ai/careers?location_radius_type=mi&location_distance_km=16.09&hl=en-US&start=0&pid=481079926934&sort_by=timestamp',
+  'Stripe': 'https://stripe.com/careers/search',
   'LG electronics': 'https://globalcareers.lge.com/jobs',
   'M2P Fintech': 'https://careers.m2pfintech.com/view-jobs/',
   'Locus': 'https://locus.freshteam.com/jobs',
@@ -243,6 +243,7 @@ const Map<String, String> defaultCompanyUrls = {
   'Hyperverge': 'https://hyperverge.co/careers/',
   'MyJar': 'https://changejar.applytojob.com/apply',
   'Cognizant': 'https://careers.cognizant.com/india-en/jobs',
+
   'johnson & johnson': 'https://www.careers.jnj.com/en/jobs/',
   'jump crypto': 'https://jumpcrypto.com/careers',
   'tech Mahindra': 'https://careers.techmahindra.com/#PostResume',
@@ -269,7 +270,6 @@ const Map<String, String> defaultCompanyUrls = {
       'https://group.bnpparibas/en/careers/all-job-offers/trainee-internship/india',
   'paypal':
       'https://paypal.eightfold.ai/careers?start=0&location=Th%C4%81ne%2C+Maharashtra%2C+IN&pid=274908584012&sort_by=distance&filter_distance=80&filter_include_remote=1',
-  'stripe': 'https://stripe.com/jobs/search?skip=0',
   'groww': 'https://job-boards.eu.greenhouse.io/groww',
   'fidelity invest':
       'https://jobs.fidelity.com/in/jobs/?search=&origin=global&lat=&lng=',

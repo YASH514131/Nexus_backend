@@ -179,6 +179,7 @@ class ScraperService {
         careerHost.contains('spotdraft.com') ||
         careerHost.contains('jobs.standardchartered.com') ||
         careerHost.contains('eightfold.ai') ||
+        careerHost.contains('stripe.com') ||
         careerHost.contains('near.foundation')) {
       final apiRows = await _fetchKnownJsonApiRows(
         companyName: company.name,
@@ -697,6 +698,11 @@ class ScraperService {
       return Uri.parse(
         'https://$originalHost/api/pcsx/search?domain=$domain&sort_by=timestamp',
       );
+    }
+
+    if (originalHost.contains('stripe.com') ||
+        discoveredHost.contains('stripe.com')) {
+      return Uri.parse('https://boards-api.greenhouse.io/v1/boards/stripe/jobs?content=true');
     }
 
     if (originalHost.contains('paxos.com') ||
@@ -3309,6 +3315,66 @@ class ScraperService {
           await Future.delayed(const Duration(milliseconds: 100));
         }
 
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (host.contains('greenhouse.io')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final seen = <String>{};
+
+        final response = await _client.get(
+          careerUri,
+          headers: const {
+            'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          },
+        ).timeout(const Duration(seconds: 20));
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final jobs = data['jobs'] as List? ?? [];
+
+          for (final item in jobs) {
+            final title = (item['title'] as String? ?? '').trim();
+            final id = (item['id'] ?? '').toString();
+            if (title.isEmpty) continue;
+
+            final locMap = item['location'];
+            final locationStr = (locMap is Map && locMap['name'] != null)
+                ? locMap['name'].toString().trim()
+                : 'Not specified';
+
+            var applyLink = item['absolute_url'] as String? ?? '';
+            if (applyLink.isEmpty) {
+              applyLink =
+                  'https://boards.greenhouse.io/embed/job_app?for=stripe&token=$id';
+            }
+
+            final key = '$id|${title.toLowerCase()}';
+            if (!seen.contains(key)) {
+              seen.add(key);
+
+              rows.add(
+                ScanResultRow(
+                  company: companyName,
+                  title: title,
+                  companyUrl: careerUri.toString(),
+                  applyLink: applyLink,
+                  location: locationStr.isEmpty ? 'Not specified' : locationStr,
+                  duration: 'Full-time',
+                  deadline: '—',
+                  source: 'Greenhouse API',
+                  error: '',
+                  experience: parseExperience(title),
+                ),
+              );
+            }
+          }
+        }
         return rows;
       } catch (_) {
         return const [];
