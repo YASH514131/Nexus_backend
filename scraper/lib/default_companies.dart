@@ -129,8 +129,6 @@ const Map<String, String> defaultCompanyUrls = {
   'Goldman Sachs': 'https://www.goldmansachs.com/careers/students',
   'Citi': 'https://jobs.citi.com/search-jobs',
   'CWAN': 'https://cwan.com/company/careers/#openings',
-  'Standard Chartered':
-      'https://jobs.standardchartered.com/content/Search-Result-Page/?employment_type=early_careers&utm_source=careersite',
   'Nomura (Laser Digital)': 'https://laserdigital.com/company/careers/',
   'DBS Bank': 'https://dbs.wd3.myworkdayjobs.com/en-GB/DBS_Careers',
   'Visa': 'https://www.visa.co.uk/en_gb/jobs/',
@@ -222,10 +220,22 @@ const Map<String, String> defaultCompanyUrls = {
   'hp inc': 'https://apply.hp.com/careers?start=0&sort_by=timestamp',
   'lenovo':
       'https://jobs.lenovo.com/en_US/careers/SearchJobs/?13036=%5B12016672%5D&13036_format=6621&listFilterMode=1&jobRecordsPerPage=10&',
-  'Sony':
-      'https://www.linkedin.com/jobs/search/?currentJobId=4378325278&f_C=30991062&geoId=92000000&origin=COMPANY_PAGE_JOBS_CLUSTER_EXPANSION&originToLandingJobPostings=4378325278%2C4378326285%2C4384586139%2C4378325558%2C4368495659%2C4378366273',
+  'Sony': 'https://www.sonyjobs.com/jobs.html',
   'samsung': 'https://sec.wd3.myworkdayjobs.com/en-US/Samsung_Careers',
   'Sanofi': 'https://sanofi.wd3.myworkdayjobs.com/SanofiCareers',
+  'Shopify': 'https://www.shopify.com/in/careers/disciplines/engineering-data',
+  'Signzy': 'https://www.signzy.com/careers',
+  'CoinDesk': 'https://bullish.wd3.myworkdayjobs.com/CoinDesk',
+  'Slack': 'https://slack.com/careers',
+  'Smallcase':
+      'https://app.pyjamahr.com/careers?company=smallcase&company_uuid=2615584222',
+  'SmartOwner': 'https://www.smartowner.com/so/of/career.htm',
+  'Snowflake': 'https://careers.snowflake.com/us/en/search-results?s=1',
+  'SpotDraft': 'https://www.spotdraft.com/careers#jobs',
+  'Standard Chartered':
+      'https://jobs.standardchartered.com/go/Early-careers-Jobs/9783557/?&feedid=363857',
+  'Starbucks':
+      'https://starbucks.eightfold.ai/careers?location_radius_type=mi&location_distance_km=16.09&hl=en-US&start=0&pid=481079926934&sort_by=timestamp',
   'LG electronics': 'https://globalcareers.lge.com/jobs',
   'M2P Fintech': 'https://careers.m2pfintech.com/view-jobs/',
   'Locus': 'https://locus.freshteam.com/jobs',

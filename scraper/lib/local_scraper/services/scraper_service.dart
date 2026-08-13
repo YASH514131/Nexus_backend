@@ -168,6 +168,17 @@ class ScraperService {
         careerHost.contains('niramai.com') ||
         careerHost.contains('gem.com') ||
         careerHost.contains('salesforce.com') ||
+        careerHost.contains('shopify.com') ||
+        careerHost.contains('signzy.com') ||
+        careerHost.contains('slack.com') ||
+        careerHost.contains('pyjamahr.com') ||
+        careerHost.contains('smartowner.com') ||
+        careerHost.contains('snowflake.com') ||
+        careerHost.contains('sonyjobs.com') ||
+        careerHost.contains('sorare.com') ||
+        careerHost.contains('spotdraft.com') ||
+        careerHost.contains('jobs.standardchartered.com') ||
+        careerHost.contains('eightfold.ai') ||
         careerHost.contains('near.foundation')) {
       final apiRows = await _fetchKnownJsonApiRows(
         companyName: company.name,
@@ -624,6 +635,68 @@ class ScraperService {
     if (originalHost.contains('securitize.io') ||
         discoveredHost.contains('securitize.io')) {
       return Uri.parse('https://boards.greenhouse.io/securitize');
+    }
+
+    if (originalHost.contains('shopify.com') ||
+        discoveredHost.contains('shopify.com')) {
+      return Uri.parse('https://www.shopify.com/careers/search');
+    }
+
+    if (originalHost.contains('signzy.com') ||
+        discoveredHost.contains('signzy.com')) {
+      return Uri.parse('https://signzy.keka.com/careers/api/embedjobs/default/active/54e30b3d-e138-4862-8055-8b2ce8c31009');
+    }
+
+    if (originalHost.contains('slack.com') ||
+        discoveredHost.contains('slack.com')) {
+      return Uri.parse('https://salesforce.wd12.myworkdayjobs.com/Slack');
+    }
+
+    if (originalHost.contains('pyjamahr.com') ||
+        discoveredHost.contains('pyjamahr.com')) {
+      final queryParams = discoveredUri.queryParameters.isNotEmpty ? discoveredUri.queryParameters : originalUri.queryParameters;
+      final companyUuid = queryParams['company_uuid'] ?? '2615584222';
+      return Uri.parse('https://api.pyjamahr.com/api/career/jobs/?company_uuid=$companyUuid');
+    }
+
+    if (originalHost.contains('snowflake.com') ||
+        discoveredHost.contains('snowflake.com')) {
+      return Uri.parse('https://jobs.ashbyhq.com/snowflake');
+    }
+
+    if (originalHost.contains('sonyjobs.com') ||
+        discoveredHost.contains('sonyjobs.com')) {
+      return Uri.parse('https://sonyglobal.wd1.myworkdayjobs.com/SonyGlobalCareers');
+    }
+
+    if (originalHost.contains('sorare.com') ||
+        discoveredHost.contains('sorare.com')) {
+      return Uri.parse('https://jobs.ashbyhq.com/sorare');
+    }
+
+    if (originalHost.contains('spotdraft.com') ||
+        discoveredHost.contains('spotdraft.com')) {
+      return Uri.parse('https://jobs.ashbyhq.com/spotdraft');
+    }
+
+    if (originalHost.contains('jobs.standardchartered.com') ||
+        discoveredHost.contains('jobs.standardchartered.com')) {
+      final feedId = discoveredUri.queryParameters['feedid'] ??
+          discoveredUri.queryParameters['feedId'] ??
+          originalUri.queryParameters['feedid'] ??
+          originalUri.queryParameters['feedId'] ??
+          '363857';
+      return Uri.parse('https://jobs.standardchartered.com/services/rss/job/?feedid=$feedId');
+    }
+
+    if (originalHost.contains('eightfold.ai') ||
+        discoveredHost.contains('eightfold.ai')) {
+      String tenant = originalHost.split('.').first;
+      if (tenant == 'app' || tenant == 'careers') tenant = 'starbucks';
+      final domain = originalUri.queryParameters['domain'] ?? '$tenant.com';
+      return Uri.parse(
+        'https://$originalHost/api/pcsx/search?domain=$domain&sort_by=timestamp',
+      );
     }
 
     if (originalHost.contains('paxos.com') ||
@@ -2557,11 +2630,13 @@ class ScraperService {
       }
     }
 
-    // Handle Intel, Samsung, Sanofi specifically, or any Workday-based site
+    // Handle Intel, Samsung, Sanofi, CoinDesk specifically, or any Workday-based site
     final workday = extractWorkdayTenantAndSite(careerUri);
     if (host.contains('intel.wd1.myworkdayjobs.com') || 
         host.contains('sec.wd3.myworkdayjobs.com') || 
         host.contains('sanofi.wd3.myworkdayjobs.com') ||
+        host.contains('bullish.wd3.myworkdayjobs.com') ||
+        host.contains('sonyglobal.wd1.myworkdayjobs.com') ||
         workday != null) {
       final tenant = workday?.tenant ?? 'intel';
       final site = workday?.site ?? 'External';
@@ -2686,6 +2761,554 @@ class ScraperService {
             }
           }
         }
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (host.contains('shopify.com')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final seen = <String>{};
+
+        final urls = [
+          'https://www.shopify.com/careers/search',
+          'https://www.shopify.com/in/careers/disciplines/engineering-data',
+        ];
+
+        for (final u in urls) {
+          try {
+            final response = await _client.get(
+              Uri.parse(u),
+              headers: const {
+                'User-Agent':
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              },
+            ).timeout(const Duration(seconds: 15));
+
+            if (response.statusCode == 200) {
+              final body = response.body;
+
+              // 1. HTML Query Parsing
+              final doc = html_parser.parse(body);
+              final aTags = doc.querySelectorAll('a[href*="/careers/"]');
+              for (final a in aTags) {
+                final href = a.attributes['href'] ?? '';
+                final h4 = a.querySelector('h4');
+                final title = (h4?.text ?? a.text).trim();
+
+                final jidMatch = RegExp(
+                  r'([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})',
+                ).firstMatch(href);
+                if (jidMatch != null &&
+                    title.isNotEmpty &&
+                    title.length > 2 &&
+                    !title.contains('View all') &&
+                    !title.contains('Careers')) {
+                  final link = href.startsWith('http')
+                      ? href
+                      : 'https://www.shopify.com$href';
+                  final key =
+                      '${title.toLowerCase()}|${link.toLowerCase()}';
+
+                  if (!seen.contains(key)) {
+                    seen.add(key);
+                    final locSpan = a.querySelector('.location span, span.text-sm');
+                    final location =
+                        locSpan?.text.trim() ?? 'Remote / Americas / EMEA';
+                    final exp = parseExperience(title);
+
+                    rows.add(
+                      ScanResultRow(
+                        company: companyName,
+                        title: title,
+                        companyUrl: careerUri.toString(),
+                        applyLink: link,
+                        location: location,
+                        duration: 'Full-time',
+                        deadline: '—',
+                        source: 'Shopify Careers API',
+                        error: '',
+                        experience: exp,
+                      ),
+                    );
+                  }
+                }
+              }
+
+              // 2. Remix Stream regex parsing
+              final unescaped = body
+                  .replaceAll(r'\"', '"')
+                  .replaceAll(r'\\', r'\');
+
+              final remixRegex = RegExp(
+                r'"([^"]{3,120})",\s*"(?:20\d\d-\d\d-\d\d)?"?\s*,\s*"https:\/\/www\.shopify\.com\/careers\?ashby_jid=([a-f0-9\-]{36})"',
+              );
+
+              for (final m in remixRegex.allMatches(unescaped)) {
+                final title = m.group(1)!.trim();
+                final jid = m.group(2)!;
+                final link = 'https://www.shopify.com/careers?ashby_jid=$jid';
+                final key =
+                    '${title.toLowerCase()}|${link.toLowerCase()}';
+
+                if (!seen.contains(key) &&
+                    title.isNotEmpty &&
+                    title.length > 2) {
+                  seen.add(key);
+                  final exp = parseExperience(title);
+
+                  rows.add(
+                    ScanResultRow(
+                      company: companyName,
+                      title: title,
+                      companyUrl: careerUri.toString(),
+                      applyLink: link,
+                      location: 'Remote / Americas / EMEA',
+                      duration: 'Full-time',
+                      deadline: '—',
+                      source: 'Shopify Careers API',
+                      error: '',
+                      experience: exp,
+                    ),
+                  );
+                }
+              }
+            }
+          } catch (_) {}
+        }
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (host.contains('signzy.keka.com') || host.contains('signzy.com')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final seen = <String>{};
+
+        final response = await _client.get(
+          Uri.parse(
+            'https://signzy.keka.com/careers/api/embedjobs/default/active/54e30b3d-e138-4862-8055-8b2ce8c31009',
+          ),
+          headers: const {'accept': 'application/json, text/plain, */*'},
+        ).timeout(const Duration(seconds: 15));
+
+        if (response.statusCode == 200) {
+          final jobs = jsonDecode(response.body) as List? ?? [];
+          for (final item in jobs.whereType<Map>()) {
+            final id = item['id'];
+            final title = (item['title'] ?? '').toString().trim();
+            if (title.isEmpty || id == null) continue;
+
+            final applyLink = 'https://signzy.keka.com/careers/job/$id';
+            final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
+
+            if (!seen.contains(key)) {
+              seen.add(key);
+
+              String locationStr = 'Bengaluru, India';
+              final locs = item['jobLocations'] as List? ?? [];
+              if (locs.isNotEmpty) {
+                final names = locs
+                    .map((l) {
+                      if (l is Map) {
+                        final city =
+                            l['city'] ??
+                            l['name'] ??
+                            l['title'] ??
+                            l['location'] ??
+                            '';
+                        final country = l['country'] ?? '';
+                        return [
+                          city,
+                          country,
+                        ].where((s) => s.toString().isNotEmpty).join(', ');
+                      }
+                      return l.toString();
+                    })
+                    .where((s) => s.isNotEmpty)
+                    .join(' | ');
+                if (names.isNotEmpty) locationStr = names;
+              }
+
+              final description = (item['description'] ?? '').toString();
+              final exp = parseExperience(
+                description.isNotEmpty ? description : title,
+              );
+
+              rows.add(
+                ScanResultRow(
+                  company: companyName,
+                  title: title,
+                  companyUrl: careerUri.toString(),
+                  applyLink: applyLink,
+                  location: locationStr,
+                  duration: 'Full-time',
+                  deadline: '—',
+                  source: 'Keka API',
+                  error: '',
+                  experience: exp,
+                ),
+              );
+            }
+          }
+        }
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (host.contains('pyjamahr.com')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final seen = <String>{};
+
+        final queryParams = careerUri.queryParameters;
+        final companyUuid = queryParams['company_uuid'] ?? '2615584222';
+        final companySlug = queryParams['company'] ?? 'smallcase';
+
+        String? nextUrl =
+            'https://api.pyjamahr.com/api/career/jobs/?company_uuid=$companyUuid';
+
+        while (nextUrl != null) {
+          try {
+            final response = await _client.get(
+              Uri.parse(nextUrl),
+              headers: const {'accept': 'application/json, text/plain, */*'},
+            ).timeout(const Duration(seconds: 15));
+
+            if (response.statusCode == 200) {
+              final data = jsonDecode(response.body);
+              if (data is Map && data['results'] is List) {
+                final results = data['results'] as List;
+                for (final item in results.whereType<Map>()) {
+                  final title = (item['title'] ?? '').toString().trim();
+                  if (title.isEmpty) continue;
+
+                  final jobUuid =
+                      item['job_uuid'] ?? item['slug'] ?? item['id'];
+                  final applyLink =
+                      'https://app.pyjamahr.com/careers?company=$companySlug&company_uuid=$companyUuid&job_uuid=$jobUuid';
+                  final key =
+                      '${title.toLowerCase()}|${applyLink.toLowerCase()}';
+
+                  if (!seen.contains(key)) {
+                    seen.add(key);
+
+                    final locationStr = (item['location'] ??
+                            item['country'] ??
+                            'Bengaluru, India')
+                        .toString()
+                        .trim();
+
+                    final minExp = item['min_experience'];
+                    final maxExp = item['max_experience'];
+                    String exp = '—';
+                    if (minExp != null || maxExp != null) {
+                      final minVal = (minExp ?? 0).toString().replaceAll('.0', '');
+                      final maxVal = (maxExp ?? '').toString().replaceAll('.0', '');
+                      exp = maxVal.isNotEmpty ? '$minVal-$maxVal years' : '$minVal+ years';
+                    } else {
+                      exp = parseExperience(title);
+                    }
+
+                    rows.add(
+                      ScanResultRow(
+                        company: companyName,
+                        title: title,
+                        companyUrl: careerUri.toString(),
+                        applyLink: applyLink,
+                        location: locationStr,
+                        duration: 'Full-time',
+                        deadline: '—',
+                        source: 'PyjamaHR API',
+                        error: '',
+                        experience: exp,
+                      ),
+                    );
+                  }
+                }
+                nextUrl = data['next'] as String?;
+              } else {
+                break;
+              }
+            } else {
+              break;
+            }
+          } catch (_) {
+            break;
+          }
+        }
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (host.contains('smartowner.com')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final seen = <String>{};
+
+        final response = await _client.get(
+          Uri.parse('https://www.smartowner.com/so/of/career.htm'),
+          headers: const {
+            'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          },
+        ).timeout(const Duration(seconds: 15));
+
+        if (response.statusCode == 200) {
+          final doc = html_parser.parse(response.body);
+          final panelHeadings = doc.querySelectorAll(
+            '.panel-heading, .card-header, h3, h4, a[data-toggle="collapse"]',
+          );
+
+          final validJobKeywords = [
+            'executive',
+            'manager',
+            'developer',
+            'architect',
+            'avp',
+            'vp',
+            'lead',
+            'analyst',
+            'specialist',
+            'assistant',
+            'counsel',
+            'engineer',
+          ];
+
+          for (final el in panelHeadings) {
+            final text = el.text.trim();
+            final lines = text
+                .split('\n')
+                .map((s) => s.trim())
+                .where((s) => s.isNotEmpty)
+                .toList();
+
+            if (lines.isNotEmpty) {
+              final title = lines[0];
+
+              if (validJobKeywords.any((k) => title.toLowerCase().contains(k)) &&
+                  !title.toLowerCase().contains('privacy') &&
+                  !title.toLowerCase().contains('cookie') &&
+                  !title.toLowerCase().contains('term')) {
+                String location = 'Bangalore, India';
+                if (lines.length > 1 && lines[1].isNotEmpty) {
+                  location = lines[1];
+                }
+
+                final applyLink = 'https://www.smartowner.com/so/of/career.htm';
+                final key = title.toLowerCase();
+
+                if (!seen.contains(key)) {
+                  seen.add(key);
+
+                  String exp = '—';
+                  final parentPanel = el.parent;
+                  if (parentPanel != null) {
+                    final fullText = parentPanel.text;
+                    final expMatch = RegExp(
+                      r'(\d+\s*[-–to\s]*\d*\s*\+?\s*years?)',
+                      caseSensitive: false,
+                    ).firstMatch(fullText);
+                    if (expMatch != null) {
+                      exp = expMatch.group(1)!;
+                    } else {
+                      exp = parseExperience(fullText);
+                    }
+                  } else {
+                    exp = parseExperience(title);
+                  }
+
+                  rows.add(
+                    ScanResultRow(
+                      company: companyName,
+                      title: title,
+                      companyUrl: careerUri.toString(),
+                      applyLink: applyLink,
+                      location: location,
+                      duration: 'Full-time',
+                      deadline: '—',
+                      source: 'SmartOwner HTML Scraper',
+                      error: '',
+                      experience: exp,
+                    ),
+                  );
+                }
+              }
+            }
+          }
+        }
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (host.contains('jobs.standardchartered.com')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final seen = <String>{};
+
+        final feedId = careerUri.queryParameters['feedid'] ??
+            careerUri.queryParameters['feedId'] ??
+            '363857';
+        final rssUri = Uri.parse(
+          'https://jobs.standardchartered.com/services/rss/job/?feedid=$feedId',
+        );
+
+        final response = await _client.get(
+          rssUri,
+          headers: const {
+            'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          },
+        ).timeout(const Duration(seconds: 15));
+
+        if (response.statusCode == 200) {
+          final itemMatches = RegExp(r'<item>(.*?)</item>', dotAll: true)
+              .allMatches(response.body);
+
+          for (final m in itemMatches) {
+            final itemXml = m.group(1)!;
+            final titleMatch = RegExp(r'<title>(.*?)</title>', dotAll: true)
+                .firstMatch(itemXml);
+            final linkMatch = RegExp(r'<link>(.*?)</link>', dotAll: true)
+                .firstMatch(itemXml);
+
+            var fullTitle = (titleMatch?.group(1) ?? '')
+                .replaceAll('<![CDATA[', '')
+                .replaceAll(']]>', '')
+                .replaceAll('&amp;', '&')
+                .trim();
+
+            if (fullTitle.isEmpty) continue;
+
+            var applyLink = (linkMatch?.group(1) ?? '')
+                .replaceAll('<![CDATA[', '')
+                .replaceAll(']]>', '')
+                .replaceAll('&amp;', '&')
+                .trim();
+
+            String locationStr = 'Not specified';
+            final locMatch = RegExp(r'\(([^()]+)\)$').firstMatch(fullTitle);
+            if (locMatch != null) {
+              locationStr = locMatch.group(1)!.trim();
+              fullTitle =
+                  fullTitle.replaceAll(RegExp(r'\s*\([^()]+\)$'), '').trim();
+            }
+
+            final key = '${fullTitle.toLowerCase()}|${applyLink.toLowerCase()}';
+            if (!seen.contains(key)) {
+              seen.add(key);
+
+              rows.add(
+                ScanResultRow(
+                  company: companyName,
+                  title: fullTitle,
+                  companyUrl: careerUri.toString(),
+                  applyLink: applyLink,
+                  location: locationStr,
+                  duration: 'Full-time',
+                  deadline: '—',
+                  source: 'Standard Chartered RSS Feed',
+                  error: '',
+                  experience: parseExperience(fullTitle),
+                ),
+              );
+            }
+          }
+        }
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (host.contains('eightfold.ai')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final seen = <String>{};
+
+        String tenant = host.split('.').first;
+        if (tenant == 'app' || tenant == 'careers') tenant = 'starbucks';
+        final domain = careerUri.queryParameters['domain'] ?? '$tenant.com';
+
+        const limit = 2000;
+        final hardTimeout = const Duration(seconds: 30);
+        final stopwatch = Stopwatch()..start();
+
+        for (var start = 0; start < limit; start += 10) {
+          if (stopwatch.elapsed > hardTimeout) break;
+
+          final apiUrl = Uri.parse(
+            'https://$host/api/pcsx/search?domain=$domain&sort_by=timestamp&start=$start',
+          );
+
+          final response = await _client.get(
+            apiUrl,
+            headers: const {
+              'User-Agent':
+                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Accept': 'application/json, text/plain, */*',
+            },
+          ).timeout(const Duration(seconds: 12));
+
+          if (response.statusCode == 200) {
+            final data =
+                jsonDecode(response.body)['data'] as Map<String, dynamic>? ?? {};
+            final positions = data['positions'] as List<dynamic>? ?? [];
+
+            if (positions.isEmpty) break;
+
+            for (final p in positions) {
+              final title = (p['name'] as String? ?? 'Untitled').trim();
+              final pid = (p['id'] ?? p['displayJobId'] ?? '').toString();
+              if (title.isEmpty || pid.isEmpty) continue;
+
+              final locs = (p['locations'] as List<dynamic>? ?? [])
+                  .map((e) => e.toString().trim())
+                  .where((e) => e.isNotEmpty)
+                  .join(', ');
+              final locationStr = locs.isEmpty ? 'Not specified' : locs;
+
+              final applyLink = 'https://$host/careers?pid=$pid';
+              final key = '$pid|${title.toLowerCase()}';
+
+              if (!seen.contains(key)) {
+                seen.add(key);
+
+                rows.add(
+                  ScanResultRow(
+                    company: companyName,
+                    title: title,
+                    companyUrl: careerUri.toString(),
+                    applyLink: applyLink,
+                    location: locationStr,
+                    duration: 'Full-time',
+                    deadline: '—',
+                    source: 'Eightfold PCSX API',
+                    error: '',
+                    experience: parseExperience(title),
+                  ),
+                );
+              }
+            }
+
+            if (positions.length < 10) break;
+          } else {
+            break;
+          }
+
+          await Future.delayed(const Duration(milliseconds: 100));
+        }
+
         return rows;
       } catch (_) {
         return const [];
