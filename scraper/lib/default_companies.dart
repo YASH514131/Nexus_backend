@@ -236,6 +236,7 @@ const Map<String, String> defaultCompanyUrls = {
   'Starbucks':
       'https://starbucks.eightfold.ai/careers?location_radius_type=mi&location_distance_km=16.09&hl=en-US&start=0&pid=481079926934&sort_by=timestamp',
   'Stripe': 'https://stripe.com/careers/search',
+  'UnitedHealth Group': 'https://careers.unitedhealthgroup.com/search-jobs',
   'LG electronics': 'https://globalcareers.lge.com/jobs',
   'M2P Fintech': 'https://careers.m2pfintech.com/view-jobs/',
   'Locus': 'https://locus.freshteam.com/jobs',

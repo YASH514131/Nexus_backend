@@ -180,6 +180,7 @@ class ScraperService {
         careerHost.contains('jobs.standardchartered.com') ||
         careerHost.contains('eightfold.ai') ||
         careerHost.contains('stripe.com') ||
+        careerHost.contains('unitedhealthgroup.com') ||
         careerHost.contains('near.foundation')) {
       final apiRows = await _fetchKnownJsonApiRows(
         companyName: company.name,
@@ -717,6 +718,11 @@ class ScraperService {
       return Uri.parse(
         'https://boards-api.greenhouse.io/v1/boards/stripe/jobs?content=true',
       );
+    }
+
+    if (originalHost.contains('unitedhealthgroup.com') ||
+        discoveredHost.contains('unitedhealthgroup.com')) {
+      return Uri.parse('https://careers.unitedhealthgroup.com/search-jobs/rss');
     }
 
     if (originalHost.contains('paxos.com') ||
@@ -3613,6 +3619,86 @@ class ScraperService {
                   source: 'Greenhouse API',
                   error: '',
                   experience: parseExperience(title),
+                ),
+              );
+            }
+          }
+        }
+        return rows;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    if (host.contains('unitedhealthgroup.com')) {
+      try {
+        final rows = <ScanResultRow>[];
+        final seen = <String>{};
+
+        final response = await _client.get(
+          careerUri,
+          headers: const {
+            'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          },
+        ).timeout(const Duration(seconds: 45));
+
+        if (response.statusCode == 200) {
+          final itemMatches = RegExp(
+            r'<item>(.*?)</item>',
+            dotAll: true,
+          ).allMatches(response.body);
+
+          for (final m in itemMatches) {
+            final itemXml = m.group(1)!;
+            final titleMatch = RegExp(
+              r'<title>(.*?)</title>',
+              dotAll: true,
+            ).firstMatch(itemXml);
+            final linkMatch = RegExp(
+              r'<link>(.*?)</link>',
+              dotAll: true,
+            ).firstMatch(itemXml);
+
+            var fullTitle = (titleMatch?.group(1) ?? '')
+                .replaceAll('<![CDATA[', '')
+                .replaceAll(']]>', '')
+                .replaceAll('&amp;', '&')
+                .trim();
+
+            if (fullTitle.isEmpty) continue;
+
+            var applyLink = (linkMatch?.group(1) ?? '')
+                .replaceAll('<![CDATA[', '')
+                .replaceAll(']]>', '')
+                .replaceAll('&amp;', '&')
+                .trim();
+
+            String locationStr = 'Not specified';
+            final locMatch = RegExp(r'-\s*\(([^()]+)\)$').firstMatch(fullTitle);
+            if (locMatch != null) {
+              locationStr = locMatch.group(1)!.trim();
+              fullTitle = fullTitle
+                  .replaceAll(RegExp(r'\s*-\s*\([^()]+\)$'), '')
+                  .trim();
+            }
+
+            final key = '${fullTitle.toLowerCase()}|${applyLink.toLowerCase()}';
+            if (!seen.contains(key)) {
+              seen.add(key);
+
+              rows.add(
+                ScanResultRow(
+                  company: companyName,
+                  title: fullTitle,
+                  companyUrl: careerUri.toString(),
+                  applyLink: applyLink,
+                  location: locationStr,
+                  duration: 'Full-time',
+                  deadline: '—',
+                  source: 'UHG RSS Feed',
+                  error: '',
+                  experience: parseExperience(fullTitle),
                 ),
               );
             }
