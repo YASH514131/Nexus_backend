@@ -3462,11 +3462,11 @@ class ScraperService {
         if (tenant == 'app' || tenant == 'careers') tenant = 'starbucks';
         final domain = careerUri.queryParameters['domain'] ?? '$tenant.com';
 
-        const maxTotal = 2000;
+        const maxTotal = 10000;
         const batchSize =
-            10; // 10 concurrent requests per batch (100 jobs/batch)
+            20; // 20 concurrent requests per batch (200 jobs/batch)
         final totalPages = (maxTotal / 10).ceil();
-        final hardTimeout = const Duration(seconds: 120);
+        final hardTimeout = const Duration(seconds: 180);
         final stopwatch = Stopwatch()..start();
 
         for (
