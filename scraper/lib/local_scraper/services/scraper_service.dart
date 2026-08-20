@@ -593,8 +593,7 @@ class ScraperService {
       return Uri.parse('https://boards.greenhouse.io/phonepe');
     }
 
-    if (originalHost.contains('pwc.in') ||
-        discoveredHost.contains('pwc.in')) {
+    if (originalHost.contains('pwc.in') || discoveredHost.contains('pwc.in')) {
       return Uri.parse('https://www.pwc.in/careers/experienced-jobs.html');
     }
 
@@ -630,7 +629,9 @@ class ScraperService {
 
     if (originalHost.contains('salesforce.com') ||
         discoveredHost.contains('salesforce.com')) {
-      return Uri.parse('https://salesforce.wd12.myworkdayjobs.com/External_Career_Site');
+      return Uri.parse(
+        'https://salesforce.wd12.myworkdayjobs.com/External_Career_Site',
+      );
     }
 
     if (originalHost.contains('securitize.io') ||
@@ -645,7 +646,9 @@ class ScraperService {
 
     if (originalHost.contains('signzy.com') ||
         discoveredHost.contains('signzy.com')) {
-      return Uri.parse('https://signzy.keka.com/careers/api/embedjobs/default/active/54e30b3d-e138-4862-8055-8b2ce8c31009');
+      return Uri.parse(
+        'https://signzy.keka.com/careers/api/embedjobs/default/active/54e30b3d-e138-4862-8055-8b2ce8c31009',
+      );
     }
 
     if (originalHost.contains('slack.com') ||
@@ -655,9 +658,13 @@ class ScraperService {
 
     if (originalHost.contains('pyjamahr.com') ||
         discoveredHost.contains('pyjamahr.com')) {
-      final queryParams = discoveredUri.queryParameters.isNotEmpty ? discoveredUri.queryParameters : originalUri.queryParameters;
+      final queryParams = discoveredUri.queryParameters.isNotEmpty
+          ? discoveredUri.queryParameters
+          : originalUri.queryParameters;
       final companyUuid = queryParams['company_uuid'] ?? '2615584222';
-      return Uri.parse('https://api.pyjamahr.com/api/career/jobs/?company_uuid=$companyUuid');
+      return Uri.parse(
+        'https://api.pyjamahr.com/api/career/jobs/?company_uuid=$companyUuid',
+      );
     }
 
     if (originalHost.contains('snowflake.com') ||
@@ -667,7 +674,9 @@ class ScraperService {
 
     if (originalHost.contains('sonyjobs.com') ||
         discoveredHost.contains('sonyjobs.com')) {
-      return Uri.parse('https://sonyglobal.wd1.myworkdayjobs.com/SonyGlobalCareers');
+      return Uri.parse(
+        'https://sonyglobal.wd1.myworkdayjobs.com/SonyGlobalCareers',
+      );
     }
 
     if (originalHost.contains('sorare.com') ||
@@ -682,12 +691,15 @@ class ScraperService {
 
     if (originalHost.contains('jobs.standardchartered.com') ||
         discoveredHost.contains('jobs.standardchartered.com')) {
-      final feedId = discoveredUri.queryParameters['feedid'] ??
+      final feedId =
+          discoveredUri.queryParameters['feedid'] ??
           discoveredUri.queryParameters['feedId'] ??
           originalUri.queryParameters['feedid'] ??
           originalUri.queryParameters['feedId'] ??
           '363857';
-      return Uri.parse('https://jobs.standardchartered.com/services/rss/job/?feedid=$feedId');
+      return Uri.parse(
+        'https://jobs.standardchartered.com/services/rss/job/?feedid=$feedId',
+      );
     }
 
     if (originalHost.contains('eightfold.ai') ||
@@ -702,7 +714,9 @@ class ScraperService {
 
     if (originalHost.contains('stripe.com') ||
         discoveredHost.contains('stripe.com')) {
-      return Uri.parse('https://boards-api.greenhouse.io/v1/boards/stripe/jobs?content=true');
+      return Uri.parse(
+        'https://boards-api.greenhouse.io/v1/boards/stripe/jobs?content=true',
+      );
     }
 
     if (originalHost.contains('paxos.com') ||
@@ -712,7 +726,9 @@ class ScraperService {
 
     if (originalHost.contains('panteracapital.com') ||
         discoveredHost.contains('panteracapital.com')) {
-      return Uri.parse('https://jobs.panteracapital.com/api-boards/search-jobs');
+      return Uri.parse(
+        'https://jobs.panteracapital.com/api-boards/search-jobs',
+      );
     }
 
     if (originalHost.contains('pgcareers.com') ||
@@ -739,7 +755,9 @@ class ScraperService {
     if (originalHost.contains('explore.jobs.netflix.net') ||
         originalHost.contains('netflix.com') ||
         originalHost.contains('jobs.netflix.net')) {
-      return Uri.parse('https://explore.jobs.netflix.net/api/apply/v2/jobs?domain=netflix.com&start=0&num=10');
+      return Uri.parse(
+        'https://explore.jobs.netflix.net/api/apply/v2/jobs?domain=netflix.com&start=0&num=10',
+      );
     }
 
     if (originalHost.contains('gomotive.com')) {
@@ -908,14 +926,20 @@ class ScraperService {
         var totalHits = limit;
 
         while (rows.length < totalHits) {
-          final uri = Uri.parse('https://www.pepsicojobs.com/api/jobs?page=$page&limit=$limit');
-          final resp = await _client.get(
-            uri,
-            headers: {
-              'User-Agent': userAgents[DateTime.now().millisecond % userAgents.length],
-              'Accept': 'application/json',
-            },
-          ).timeout(const Duration(seconds: 15));
+          final uri = Uri.parse(
+            'https://www.pepsicojobs.com/api/jobs?page=$page&limit=$limit',
+          );
+          final resp = await _client
+              .get(
+                uri,
+                headers: {
+                  'User-Agent':
+                      userAgents[DateTime.now().millisecond %
+                          userAgents.length],
+                  'Accept': 'application/json',
+                },
+              )
+              .timeout(const Duration(seconds: 15));
 
           if (resp.statusCode != 200 || resp.body.trim().isEmpty) {
             break;
@@ -941,18 +965,23 @@ class ScraperService {
             if (title.isEmpty) continue;
 
             final slug = (map['slug'] ?? '').toString().trim();
-            final applyLink = (map['apply_url'] ?? '').toString().trim().isNotEmpty
+            final applyLink =
+                (map['apply_url'] ?? '').toString().trim().isNotEmpty
                 ? map['apply_url'].toString().trim()
                 : 'https://www.pepsicojobs.com/main/jobs/$slug';
 
             final shortLoc = (map['short_location'] ?? '').toString().trim();
             final fullLoc = (map['full_location'] ?? '').toString().trim();
-            final location = shortLoc.isNotEmpty ? shortLoc : (fullLoc.isNotEmpty ? fullLoc : 'Not specified');
+            final location = shortLoc.isNotEmpty
+                ? shortLoc
+                : (fullLoc.isNotEmpty ? fullLoc : 'Not specified');
 
             if (matchTerms.isNotEmpty) {
               final titleLower = title.toLowerCase();
               final exactWordMatch = matchTerms.any((kw) {
-                final pattern = RegExp('\\b${RegExp.escape(kw.toLowerCase())}\\b');
+                final pattern = RegExp(
+                  '\\b${RegExp.escape(kw.toLowerCase())}\\b',
+                );
                 return pattern.hasMatch(titleLower) ||
                     pattern.hasMatch(location.toLowerCase());
               });
@@ -964,7 +993,9 @@ class ScraperService {
             final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
             if (seen.add(key)) {
               final empType = (map['employment_type'] ?? '').toString().trim();
-              final duration = empType.isNotEmpty ? empType : parseDuration(title).$1;
+              final duration = empType.isNotEmpty
+                  ? empType
+                  : parseDuration(title).$1;
               final quals = (map['qualifications'] ?? '').toString().trim();
               final desc = (map['description'] ?? '').toString().trim();
               final exp = parseExperience(quals.isNotEmpty ? quals : desc);
@@ -1001,12 +1032,15 @@ class ScraperService {
         final seen = <String>{};
         final matchTerms = keywords;
 
-        final resp = await _client.get(
-          careerUri,
-          headers: {
-            'User-Agent': userAgents[DateTime.now().millisecond % userAgents.length],
-          },
-        ).timeout(const Duration(seconds: 15));
+        final resp = await _client
+            .get(
+              careerUri,
+              headers: {
+                'User-Agent':
+                    userAgents[DateTime.now().millisecond % userAgents.length],
+              },
+            )
+            .timeout(const Duration(seconds: 15));
 
         if (resp.statusCode != 200 || resp.body.trim().isEmpty) {
           return const [];
@@ -1043,7 +1077,9 @@ class ScraperService {
               if (matchTerms.isNotEmpty) {
                 final titleLower = title.toLowerCase();
                 final exactWordMatch = matchTerms.any((kw) {
-                  final pattern = RegExp('\\b${RegExp.escape(kw.toLowerCase())}\\b');
+                  final pattern = RegExp(
+                    '\\b${RegExp.escape(kw.toLowerCase())}\\b',
+                  );
                   return pattern.hasMatch(titleLower) ||
                       pattern.hasMatch(location.toLowerCase());
                 });
@@ -1092,19 +1128,28 @@ class ScraperService {
         int? total;
 
         while (true) {
-          final getUri = Uri.parse('https://jobsapi-google.m-cloud.io/api/job/search').replace(queryParameters: {
-            'CompanyName': org,
-            'pageSize': '$pageSize',
-            'offset': '$offset',
-          });
+          final getUri =
+              Uri.parse(
+                'https://jobsapi-google.m-cloud.io/api/job/search',
+              ).replace(
+                queryParameters: {
+                  'CompanyName': org,
+                  'pageSize': '$pageSize',
+                  'offset': '$offset',
+                },
+              );
 
-          final response = await _client.get(
-            getUri,
-            headers: {
-              'User-Agent': userAgents[DateTime.now().millisecond % userAgents.length],
-              'Accept': 'application/json',
-            },
-          ).timeout(const Duration(seconds: 15));
+          final response = await _client
+              .get(
+                getUri,
+                headers: {
+                  'User-Agent':
+                      userAgents[DateTime.now().millisecond %
+                          userAgents.length],
+                  'Accept': 'application/json',
+                },
+              )
+              .timeout(const Duration(seconds: 15));
 
           if (response.statusCode != 200 || response.body.trim().isEmpty) {
             break;
@@ -1143,7 +1188,9 @@ class ScraperService {
               ].where((v) => v.trim().isNotEmpty).join(' | ').toLowerCase();
 
               final exactWordMatch = matchTerms.any((kw) {
-                final pattern = RegExp('\\b${RegExp.escape(kw.toLowerCase())}\\b');
+                final pattern = RegExp(
+                  '\\b${RegExp.escape(kw.toLowerCase())}\\b',
+                );
                 return pattern.hasMatch(searchable);
               });
               if (!exactWordMatch &&
@@ -1155,12 +1202,20 @@ class ScraperService {
 
             final seoUrl = (map['seo_url'] ?? '').toString().trim();
             final urlVal = (map['url'] ?? '').toString().trim();
-            final applyLink = urlVal.isNotEmpty ? urlVal : (seoUrl.isNotEmpty ? seoUrl : careerUri.toString());
+            final applyLink = urlVal.isNotEmpty
+                ? urlVal
+                : (seoUrl.isNotEmpty ? seoUrl : careerUri.toString());
 
             final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
             if (seen.add(key)) {
-              final locationParts = [city, state, country].where((v) => v.isNotEmpty).toList();
-              final location = locationParts.isEmpty ? 'Not specified' : locationParts.join(', ');
+              final locationParts = [
+                city,
+                state,
+                country,
+              ].where((v) => v.isNotEmpty).toList();
+              final location = locationParts.isEmpty
+                  ? 'Not specified'
+                  : locationParts.join(', ');
 
               final exp = parseExperience(description);
               rows.add(
@@ -1201,12 +1256,15 @@ class ScraperService {
         final seen = <String>{};
         final matchTerms = keywords;
 
-        final resp = await _client.get(
-          careerUri,
-          headers: {
-            'User-Agent': userAgents[DateTime.now().millisecond % userAgents.length],
-          },
-        ).timeout(const Duration(seconds: 15));
+        final resp = await _client
+            .get(
+              careerUri,
+              headers: {
+                'User-Agent':
+                    userAgents[DateTime.now().millisecond % userAgents.length],
+              },
+            )
+            .timeout(const Duration(seconds: 15));
 
         if (resp.statusCode != 200 || resp.body.trim().isEmpty) {
           return const [];
@@ -1244,8 +1302,13 @@ class ScraperService {
                 final locs = map['locations'] as List? ?? [];
                 final isRemote = map['remote'] == true;
 
-                final locParts = locs.map((e) => e.toString().trim()).where((s) => s.isNotEmpty).toList();
-                var location = locParts.isEmpty ? 'Not specified' : locParts.join(', ');
+                final locParts = locs
+                    .map((e) => e.toString().trim())
+                    .where((s) => s.isNotEmpty)
+                    .toList();
+                var location = locParts.isEmpty
+                    ? 'Not specified'
+                    : locParts.join(', ');
                 if (isRemote) {
                   if (location == 'Not specified') {
                     location = 'Remote';
@@ -1263,7 +1326,9 @@ class ScraperService {
                   ].where((v) => v.trim().isNotEmpty).join(' | ').toLowerCase();
 
                   final exactWordMatch = matchTerms.any((kw) {
-                    final pattern = RegExp('\\b${RegExp.escape(kw.toLowerCase())}\\b');
+                    final pattern = RegExp(
+                      '\\b${RegExp.escape(kw.toLowerCase())}\\b',
+                    );
                     return pattern.hasMatch(searchable);
                   });
                   if (!exactWordMatch &&
@@ -1297,7 +1362,9 @@ class ScraperService {
                       company: compName.isEmpty ? companyName : compName,
                       title: title,
                       companyUrl: careerUri.toString(),
-                      applyLink: applyLink.isEmpty ? careerUri.toString() : applyLink,
+                      applyLink: applyLink.isEmpty
+                          ? careerUri.toString()
+                          : applyLink,
                       location: location,
                       duration: parseDuration(title).$1,
                       deadline: '—',
@@ -1370,7 +1437,9 @@ class ScraperService {
               final compLower = comp.toLowerCase();
               final locLower = location.toLowerCase();
               final exactWordMatch = matchTerms.any((kw) {
-                final pattern = RegExp('\\b${RegExp.escape(kw.toLowerCase())}\\b');
+                final pattern = RegExp(
+                  '\\b${RegExp.escape(kw.toLowerCase())}\\b',
+                );
                 return pattern.hasMatch(titleLower) ||
                     pattern.hasMatch(compLower) ||
                     pattern.hasMatch(locLower);
@@ -1420,15 +1489,18 @@ class ScraperService {
           'grouped': false,
         };
 
-        final resp = await _client.post(
-          careerUri,
-          headers: {
-            'User-Agent': userAgents[DateTime.now().millisecond % userAgents.length],
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: jsonEncode(payload),
-        ).timeout(const Duration(seconds: 30));
+        final resp = await _client
+            .post(
+              careerUri,
+              headers: {
+                'User-Agent':
+                    userAgents[DateTime.now().millisecond % userAgents.length],
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+              },
+              body: jsonEncode(payload),
+            )
+            .timeout(const Duration(seconds: 30));
 
         if (resp.statusCode == 200) {
           final data = jsonDecode(resp.body);
@@ -1439,8 +1511,12 @@ class ScraperService {
               final title = (map['title'] ?? '').toString().trim();
               if (title.isEmpty) continue;
 
-              final comp = (map['companyName'] ?? companyName).toString().trim();
-              final applyLink = (map['applyUrl'] ?? map['url'] ?? '').toString().trim();
+              final comp = (map['companyName'] ?? companyName)
+                  .toString()
+                  .trim();
+              final applyLink = (map['applyUrl'] ?? map['url'] ?? '')
+                  .toString()
+                  .trim();
               if (applyLink.isEmpty) continue;
 
               final locs = map['locations'] as List? ?? [];
@@ -1451,7 +1527,9 @@ class ScraperService {
                 final compLower = comp.toLowerCase();
                 final locLower = location.toLowerCase();
                 final exactWordMatch = matchTerms.any((kw) {
-                  final pattern = RegExp('\\b${RegExp.escape(kw.toLowerCase())}\\b');
+                  final pattern = RegExp(
+                    '\\b${RegExp.escape(kw.toLowerCase())}\\b',
+                  );
                   return pattern.hasMatch(titleLower) ||
                       pattern.hasMatch(compLower) ||
                       pattern.hasMatch(locLower);
@@ -1464,7 +1542,9 @@ class ScraperService {
               final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
               if (seen.add(key)) {
                 final isContract = map['contractor'] == true;
-                final duration = isContract ? 'Contract' : parseDuration(title).$1;
+                final duration = isContract
+                    ? 'Contract'
+                    : parseDuration(title).$1;
                 final minYears = map['minYearsExp'];
                 var exp = '—';
                 if (minYears is num) {
@@ -1510,16 +1590,25 @@ class ScraperService {
 
         while (true) {
           final path = careerUri.path.isEmpty || careerUri.path == '/'
-              ? (host.contains('orange.jobs') ? '/gb/en/search-results' : '/in/en/search-results')
+              ? (host.contains('orange.jobs')
+                    ? '/gb/en/search-results'
+                    : '/in/en/search-results')
               : careerUri.path;
-          final uri = Uri.parse('${careerUri.scheme}://${careerUri.host}$path?from=$from&s=1&sortBy=Most+recent');
-          final resp = await _client.get(
-            uri,
-            headers: {
-              'User-Agent': userAgents[DateTime.now().millisecond % userAgents.length],
-              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            },
-          ).timeout(const Duration(seconds: 15));
+          final uri = Uri.parse(
+            '${careerUri.scheme}://${careerUri.host}$path?from=$from&s=1&sortBy=Most+recent',
+          );
+          final resp = await _client
+              .get(
+                uri,
+                headers: {
+                  'User-Agent':
+                      userAgents[DateTime.now().millisecond %
+                          userAgents.length],
+                  'Accept':
+                      'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                },
+              )
+              .timeout(const Duration(seconds: 15));
 
           if (resp.statusCode != 200) {
             emptyStreak++;
@@ -1590,14 +1679,20 @@ class ScraperService {
               final applyLink = (job['applyUrl'] as String? ?? '').trim();
               if (applyLink.isEmpty) continue;
 
-              final location = (job['location'] as String? ??
-                      job['cityStateCountry'] as String? ??
-                      (job['multi_location'] as List?)?.join(', ') ??
-                      'Not specified')
-                  .trim();
+              final location =
+                  (job['location'] as String? ??
+                          job['cityStateCountry'] as String? ??
+                          (job['multi_location'] as List?)?.join(', ') ??
+                          'Not specified')
+                      .trim();
 
-              final descTeaser = (job['descriptionTeaser'] as String? ?? '').trim();
-              final descTeaserKeyword = (job['ml_job_parser']?['descriptionTeaser_keyword'] as String? ?? '').trim();
+              final descTeaser = (job['descriptionTeaser'] as String? ?? '')
+                  .trim();
+              final descTeaserKeyword =
+                  (job['ml_job_parser']?['descriptionTeaser_keyword']
+                              as String? ??
+                          '')
+                      .trim();
               final fullDesc = '$descTeaser\n$descTeaserKeyword';
 
               if (matchTerms.isNotEmpty) {
@@ -1605,7 +1700,9 @@ class ScraperService {
                 final descLower = fullDesc.toLowerCase();
                 final locLower = location.toLowerCase();
                 final exactWordMatch = matchTerms.any((kw) {
-                  final pattern = RegExp('\\b${RegExp.escape(kw.toLowerCase())}\\b');
+                  final pattern = RegExp(
+                    '\\b${RegExp.escape(kw.toLowerCase())}\\b',
+                  );
                   return pattern.hasMatch(titleLower) ||
                       pattern.hasMatch(descLower) ||
                       pattern.hasMatch(locLower);
@@ -1628,7 +1725,9 @@ class ScraperService {
                     location: location.isEmpty ? 'Not specified' : location,
                     duration: durationData.$1,
                     deadline: '—',
-                    source: host.contains('orange.jobs') ? 'Orange Jobs' : 'P&G Careers',
+                    source: host.contains('orange.jobs')
+                        ? 'Orange Jobs'
+                        : 'P&G Careers',
                     error: '',
                     experience: exp,
                   ),
@@ -1663,15 +1762,19 @@ class ScraperService {
             '?domain=netflix.com&start=$offset&num=10',
           );
           try {
-            final resp = await _client.get(
-              uri,
-              headers: {
-                'User-Agent': userAgents[DateTime.now().millisecond % userAgents.length],
-                'Accept': 'application/json, */*',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Referer': 'https://explore.jobs.netflix.net/careers',
-              },
-            ).timeout(const Duration(seconds: 20));
+            final resp = await _client
+                .get(
+                  uri,
+                  headers: {
+                    'User-Agent':
+                        userAgents[DateTime.now().millisecond %
+                            userAgents.length],
+                    'Accept': 'application/json, */*',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Referer': 'https://explore.jobs.netflix.net/careers',
+                  },
+                )
+                .timeout(const Duration(seconds: 20));
             if (resp.statusCode != 200) return null;
             return jsonDecode(resp.body) as Map<String, dynamic>?;
           } catch (_) {
@@ -1692,25 +1795,34 @@ class ScraperService {
             final title = (pos['name'] as String? ?? '').trim();
             if (title.isEmpty) continue;
             final location = (pos['location'] as String? ?? '').trim();
-            final applyLink = (pos['canonicalPositionUrl'] as String? ??
-                'https://explore.jobs.netflix.net/careers/job/${pos['id']}').trim();
+            final applyLink =
+                (pos['canonicalPositionUrl'] as String? ??
+                        'https://explore.jobs.netflix.net/careers/job/${pos['id']}')
+                    .trim();
             final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
             if (!seen.contains(key)) {
               seen.add(key);
-              final description = (pos['description'] ?? pos['job_description'] ?? pos['name'] ?? '').toString();
+              final description =
+                  (pos['description'] ??
+                          pos['job_description'] ??
+                          pos['name'] ??
+                          '')
+                      .toString();
               final exp = parseExperience(description);
-              rows.add(ScanResultRow(
-                company: companyName,
-                title: title,
-                companyUrl: 'https://explore.jobs.netflix.net/careers',
-                applyLink: applyLink,
-                location: location.isEmpty ? 'Not specified' : location,
-                duration: '—',
-                deadline: '—',
-                source: 'Netflix Careers (Eightfold API)',
-                error: '',
-                experience: exp,
-              ));
+              rows.add(
+                ScanResultRow(
+                  company: companyName,
+                  title: title,
+                  companyUrl: 'https://explore.jobs.netflix.net/careers',
+                  applyLink: applyLink,
+                  location: location.isEmpty ? 'Not specified' : location,
+                  duration: '—',
+                  deadline: '—',
+                  source: 'Netflix Careers (Eightfold API)',
+                  error: '',
+                  experience: exp,
+                ),
+              );
             }
           }
         }
@@ -1738,28 +1850,33 @@ class ScraperService {
     if (host.contains('gem.com')) {
       try {
         final rows = <ScanResultRow>[];
-        final boardId = careerUri.pathSegments.firstWhere((s) => s.isNotEmpty, orElse: () => '');
+        final boardId = careerUri.pathSegments.firstWhere(
+          (s) => s.isNotEmpty,
+          orElse: () => '',
+        );
         if (boardId.isEmpty) return const [];
 
         final body = jsonEncode([
           {
             'operationName': 'JobBoardList',
-            'variables': {
-              'boardId': boardId,
-            },
-            'query': 'query JobBoardList(\$boardId: String!) { oatsExternalJobPostings(boardId: \$boardId) { jobPostings { id extId title locations { id name city isoCountry isRemote } } } }',
-          }
+            'variables': {'boardId': boardId},
+            'query':
+                'query JobBoardList(\$boardId: String!) { oatsExternalJobPostings(boardId: \$boardId) { jobPostings { id extId title locations { id name city isoCountry isRemote } } } }',
+          },
         ]);
 
-        final response = await _client.post(
-          Uri.parse('https://jobs.gem.com/api/public/graphql/batch'),
-          headers: {
-            'User-Agent': userAgents[DateTime.now().millisecond % userAgents.length],
-            'Content-Type': 'application/json',
-            'batch': 'true',
-          },
-          body: body,
-        ).timeout(const Duration(seconds: 15));
+        final response = await _client
+            .post(
+              Uri.parse('https://jobs.gem.com/api/public/graphql/batch'),
+              headers: {
+                'User-Agent':
+                    userAgents[DateTime.now().millisecond % userAgents.length],
+                'Content-Type': 'application/json',
+                'batch': 'true',
+              },
+              body: body,
+            )
+            .timeout(const Duration(seconds: 15));
 
         if (response.statusCode != 200 || response.body.trim().isEmpty) {
           return const [];
@@ -1787,18 +1904,20 @@ class ScraperService {
           }
 
           final exp = parseExperience(title);
-          rows.add(ScanResultRow(
-            company: companyName,
-            title: title,
-            companyUrl: careerUri.toString(),
-            applyLink: applyLink,
-            location: location,
-            duration: '—',
-            deadline: '—',
-            source: 'Gem Job Board (GraphQL API)',
-            error: '',
-            experience: exp,
-          ));
+          rows.add(
+            ScanResultRow(
+              company: companyName,
+              title: title,
+              companyUrl: careerUri.toString(),
+              applyLink: applyLink,
+              location: location,
+              duration: '—',
+              deadline: '—',
+              source: 'Gem Job Board (GraphQL API)',
+              error: '',
+              experience: exp,
+            ),
+          );
         }
 
         return rows;
@@ -1810,12 +1929,15 @@ class ScraperService {
     if (host.contains('niramai.com')) {
       try {
         final rows = <ScanResultRow>[];
-        final response = await _client.get(
-          Uri.parse('https://niramai.com/wp-json/wp/v2/jobpost'),
-          headers: {
-            'User-Agent': userAgents[DateTime.now().millisecond % userAgents.length],
-          },
-        ).timeout(const Duration(seconds: 15));
+        final response = await _client
+            .get(
+              Uri.parse('https://niramai.com/wp-json/wp/v2/jobpost'),
+              headers: {
+                'User-Agent':
+                    userAgents[DateTime.now().millisecond % userAgents.length],
+              },
+            )
+            .timeout(const Duration(seconds: 15));
 
         if (response.statusCode != 200 || response.body.trim().isEmpty) {
           return const [];
@@ -1824,36 +1946,41 @@ class ScraperService {
         final data = jsonDecode(response.body) as List<dynamic>;
         for (final item in data) {
           if (item is! Map<String, dynamic>) continue;
-          
+
           final titleObj = item['title'] as Map<String, dynamic>?;
           var title = (titleObj?['rendered'] as String? ?? '').trim();
           title = title.replaceAll('&#8211;', '–').replaceAll('&amp;', '&');
-          
+
           final applyLink = (item['link'] as String? ?? '').trim();
           if (title.isEmpty || applyLink.isEmpty) continue;
 
           final contentObj = item['content'] as Map<String, dynamic>?;
           final contentStr = contentObj?['rendered'] as String? ?? '';
           var location = 'See listing';
-          final locMatch = RegExp(r'Location:\s*([^\n<]+)', caseSensitive: false).firstMatch(contentStr);
+          final locMatch = RegExp(
+            r'Location:\s*([^\n<]+)',
+            caseSensitive: false,
+          ).firstMatch(contentStr);
           if (locMatch != null) {
             location = locMatch.group(1)!.trim();
             location = location.replaceAll(RegExp(r'<[^>]*>'), '').trim();
           }
 
           final exp = parseExperience(contentStr);
-          rows.add(ScanResultRow(
-            company: companyName,
-            title: title,
-            companyUrl: 'https://niramai.com/careers/',
-            applyLink: applyLink,
-            location: location,
-            duration: '—',
-            deadline: '—',
-            source: 'Niramai Careers (WP API)',
-            error: '',
-            experience: exp,
-          ));
+          rows.add(
+            ScanResultRow(
+              company: companyName,
+              title: title,
+              companyUrl: 'https://niramai.com/careers/',
+              applyLink: applyLink,
+              location: location,
+              duration: '—',
+              deadline: '—',
+              source: 'Niramai Careers (WP API)',
+              error: '',
+              experience: exp,
+            ),
+          );
         }
 
         return rows;
@@ -1868,7 +1995,8 @@ class ScraperService {
         final seen = <String>{};
 
         final headers = {
-          'User-Agent': userAgents[DateTime.now().millisecond % userAgents.length],
+          'User-Agent':
+              userAgents[DateTime.now().millisecond % userAgents.length],
           'Accept': 'application/json, text/plain, */*',
           'Content-Type': 'application/json',
         };
@@ -1881,7 +2009,9 @@ class ScraperService {
         });
 
         final firstPageResp = await _client.post(
-          Uri.parse('https://nvidia.wd5.myworkdayjobs.com/wday/cxs/nvidia/NVIDIAExternalCareerSite/jobs'),
+          Uri.parse(
+            'https://nvidia.wd5.myworkdayjobs.com/wday/cxs/nvidia/NVIDIAExternalCareerSite/jobs',
+          ),
           headers: headers,
           body: firstPageBody,
         );
@@ -1890,10 +2020,13 @@ class ScraperService {
           return const [];
         }
 
-        final firstPageData = jsonDecode(firstPageResp.body) as Map<String, dynamic>;
+        final firstPageData =
+            jsonDecode(firstPageResp.body) as Map<String, dynamic>;
         final facets = firstPageData['facets'] as List<dynamic>? ?? [];
         final jobFamilyGroupFacet = facets.firstWhere(
-          (f) => f is Map<String, dynamic> && f['facetParameter'] == 'jobFamilyGroup',
+          (f) =>
+              f is Map<String, dynamic> &&
+              f['facetParameter'] == 'jobFamilyGroup',
           orElse: () => null,
         );
 
@@ -1902,28 +2035,33 @@ class ScraperService {
           final externalPath = (job['externalPath'] as String? ?? '').trim();
           if (title.isEmpty || externalPath.isEmpty) return;
 
-          final applyLink = 'https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite$externalPath';
-          final location = (job['locationsText'] as String? ?? 'See listing').trim();
+          final applyLink =
+              'https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite$externalPath';
+          final location = (job['locationsText'] as String? ?? 'See listing')
+              .trim();
 
           if (!seen.contains(applyLink)) {
             seen.add(applyLink);
             final exp = parseExperience(title);
-            rows.add(ScanResultRow(
-              company: companyName,
-              title: title,
-              companyUrl: 'https://jobs.nvidia.com/careers',
-              applyLink: applyLink,
-              location: location,
-              duration: '—',
-              deadline: '—',
-              source: 'NVIDIA Careers (Workday API)',
-              error: '',
-              experience: exp,
-            ));
+            rows.add(
+              ScanResultRow(
+                company: companyName,
+                title: title,
+                companyUrl: 'https://jobs.nvidia.com/careers',
+                applyLink: applyLink,
+                location: location,
+                duration: '—',
+                deadline: '—',
+                source: 'NVIDIA Careers (Workday API)',
+                error: '',
+                experience: exp,
+              ),
+            );
           }
         }
 
-        final firstPageJobs = firstPageData['jobPostings'] as List<dynamic>? ?? [];
+        final firstPageJobs =
+            firstPageData['jobPostings'] as List<dynamic>? ?? [];
         for (final job in firstPageJobs) {
           if (job is Map<String, dynamic>) {
             addJob(job);
@@ -1964,7 +2102,9 @@ class ScraperService {
 
             try {
               final resp = await _client.post(
-                Uri.parse('https://nvidia.wd5.myworkdayjobs.com/wday/cxs/nvidia/NVIDIAExternalCareerSite/jobs'),
+                Uri.parse(
+                  'https://nvidia.wd5.myworkdayjobs.com/wday/cxs/nvidia/NVIDIAExternalCareerSite/jobs',
+                ),
                 headers: headers,
                 body: body,
               );
@@ -1994,13 +2134,16 @@ class ScraperService {
         final rows = <ScanResultRow>[];
         final seen = <String>{};
 
-        final response = await _client.get(
-          Uri.parse('https://www.novartis.com/sitemap.xml'),
-          headers: {
-            'User-Agent': userAgents[DateTime.now().millisecond % userAgents.length],
-            'Accept': 'application/xml,text/xml,*/*',
-          },
-        ).timeout(const Duration(seconds: 30));
+        final response = await _client
+            .get(
+              Uri.parse('https://www.novartis.com/sitemap.xml'),
+              headers: {
+                'User-Agent':
+                    userAgents[DateTime.now().millisecond % userAgents.length],
+                'Accept': 'application/xml,text/xml,*/*',
+              },
+            )
+            .timeout(const Duration(seconds: 30));
 
         if (response.statusCode != 200 || response.body.trim().isEmpty) {
           return const [];
@@ -2022,27 +2165,36 @@ class ScraperService {
             if (slugMatch != null) {
               var titleSlug = slugMatch.group(1)!;
               titleSlug = titleSlug.replaceFirst(RegExp(r'^req-\d+-'), '');
-              titleSlug = titleSlug.replaceFirst(RegExp(r'-[a-z]{2}-[a-z]{2}$'), '');
+              titleSlug = titleSlug.replaceFirst(
+                RegExp(r'-[a-z]{2}-[a-z]{2}$'),
+                '',
+              );
               title = titleSlug
                   .replaceAll('-', ' ')
                   .split(' ')
-                  .map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}')
+                  .map(
+                    (w) => w.isEmpty
+                        ? ''
+                        : '${w[0].toUpperCase()}${w.substring(1)}',
+                  )
                   .join(' ');
             }
 
             final exp = parseExperience(title);
-            rows.add(ScanResultRow(
-              company: companyName,
-              title: title,
-              companyUrl: 'https://www.novartis.com/careers/career-search',
-              applyLink: url,
-              location: 'See listing',
-              duration: '—',
-              deadline: '—',
-              source: 'Novartis Careers Sitemap',
-              error: '',
-              experience: exp,
-            ));
+            rows.add(
+              ScanResultRow(
+                company: companyName,
+                title: title,
+                companyUrl: 'https://www.novartis.com/careers/career-search',
+                applyLink: url,
+                location: 'See listing',
+                duration: '—',
+                deadline: '—',
+                source: 'Novartis Careers Sitemap',
+                error: '',
+                experience: exp,
+              ),
+            );
           }
         }
 
@@ -2057,21 +2209,28 @@ class ScraperService {
         final rows = <ScanResultRow>[];
         final seen = <String>{};
 
-        final response = await _client.get(
-          careerUri,
-          headers: {
-            'User-Agent': userAgents[DateTime.now().millisecond % userAgents.length],
-            'Accept': 'application/xml,text/xml,*/*',
-            'Accept-Language': 'en-US,en;q=0.9',
-          },
-        ).timeout(const Duration(seconds: 15));
+        final response = await _client
+            .get(
+              careerUri,
+              headers: {
+                'User-Agent':
+                    userAgents[DateTime.now().millisecond % userAgents.length],
+                'Accept': 'application/xml,text/xml,*/*',
+                'Accept-Language': 'en-US,en;q=0.9',
+              },
+            )
+            .timeout(const Duration(seconds: 15));
 
         if (response.statusCode != 200 || response.body.trim().isEmpty) {
           return const [];
         }
 
         final doc = html_parser.parse(response.body);
-        final locs = doc.querySelectorAll('url loc').map((el) => el.text.trim()).where((t) => t.isNotEmpty).toList();
+        final locs = doc
+            .querySelectorAll('url loc')
+            .map((el) => el.text.trim())
+            .where((t) => t.isNotEmpty)
+            .toList();
 
         String decodeComponentRobust(String s) {
           try {
@@ -2080,27 +2239,46 @@ class ScraperService {
             try {
               return Uri.decodeFull(s);
             } catch (_) {
-              return s.replaceAll('%28', '(').replaceAll('%29', ')').replaceAll('%20', ' ');
+              return s
+                  .replaceAll('%28', '(')
+                  .replaceAll('%29', ')')
+                  .replaceAll('%20', ' ');
             }
           }
         }
 
         String cleanTitle(String title) {
           var t = title.trim();
-          final trailingPattern = RegExp(r'\s+(?:[A-Z]{2,3}\b\s+)?(?:\d+[\s\d-]*)$');
+          final trailingPattern = RegExp(
+            r'\s+(?:[A-Z]{2,3}\b\s+)?(?:\d+[\s\d-]*)$',
+          );
           t = t.replaceFirst(trailingPattern, '').trim();
 
-          t = t.replaceAll(RegExp(r'\s*\(mwd\)\s*$', caseSensitive: false), ' (m/w/d)');
-          t = t.replaceAll(RegExp(r'\s*\(hf\)\s*$', caseSensitive: false), ' (h/f)');
-          t = t.replaceAll(RegExp(r'\s*\(mwd\)-\s*$', caseSensitive: false), ' (m/w/d)');
-          t = t.replaceAll(RegExp(r'\s*\(m\/w\/d\)\s*$', caseSensitive: false), ' (m/w/d)');
+          t = t.replaceAll(
+            RegExp(r'\s*\(mwd\)\s*$', caseSensitive: false),
+            ' (m/w/d)',
+          );
+          t = t.replaceAll(
+            RegExp(r'\s*\(hf\)\s*$', caseSensitive: false),
+            ' (h/f)',
+          );
+          t = t.replaceAll(
+            RegExp(r'\s*\(mwd\)-\s*$', caseSensitive: false),
+            ' (m/w/d)',
+          );
+          t = t.replaceAll(
+            RegExp(r'\s*\(m\/w\/d\)\s*$', caseSensitive: false),
+            ' (m/w/d)',
+          );
           return t;
         }
 
         for (final u in locs) {
           try {
             final uri = Uri.parse(u);
-            final segments = uri.pathSegments.where((s) => s.isNotEmpty).toList();
+            final segments = uri.pathSegments
+                .where((s) => s.isNotEmpty)
+                .toList();
             if (segments.length >= 3 && segments[0] == 'job') {
               final jobInfo = segments[1];
               final firstHyphen = jobInfo.indexOf('-');
@@ -2108,8 +2286,12 @@ class ScraperService {
                 final locationRaw = jobInfo.substring(0, firstHyphen);
                 final titleRaw = jobInfo.substring(firstHyphen + 1);
 
-                final location = decodeComponentRobust(locationRaw).replaceAll('-', ' ').trim();
-                final title = cleanTitle(decodeComponentRobust(titleRaw).replaceAll('-', ' ').trim());
+                final location = decodeComponentRobust(
+                  locationRaw,
+                ).replaceAll('-', ' ').trim();
+                final title = cleanTitle(
+                  decodeComponentRobust(titleRaw).replaceAll('-', ' ').trim(),
+                );
 
                 if (title.isNotEmpty) {
                   final key = '${title.toLowerCase()}|${u.toLowerCase()}';
@@ -2206,7 +2388,9 @@ class ScraperService {
             if (response.statusCode == 200) {
               return jsonDecode(response.body);
             } else {
-              print('Phenom fetchOffset(\$offset) failed with \${response.statusCode}');
+              print(
+                'Phenom fetchOffset(\$offset) failed with \${response.statusCode}',
+              );
             }
           } catch (e) {
             print('Phenom fetchOffset(\$offset) exception: \$e');
@@ -2460,7 +2644,8 @@ class ScraperService {
           if (seen.contains(key)) continue;
           seen.add(key);
 
-          final expField = map['experience_required'] ?? map['experience'] ?? '';
+          final expField =
+              map['experience_required'] ?? map['experience'] ?? '';
           final exp = parseExperience('$expField $title');
           rows.add(
             ScanResultRow(
@@ -2638,8 +2823,8 @@ class ScraperService {
 
     // Handle Intel, Samsung, Sanofi, CoinDesk specifically, or any Workday-based site
     final workday = extractWorkdayTenantAndSite(careerUri);
-    if (host.contains('intel.wd1.myworkdayjobs.com') || 
-        host.contains('sec.wd3.myworkdayjobs.com') || 
+    if (host.contains('intel.wd1.myworkdayjobs.com') ||
+        host.contains('sec.wd3.myworkdayjobs.com') ||
         host.contains('sanofi.wd3.myworkdayjobs.com') ||
         host.contains('bullish.wd3.myworkdayjobs.com') ||
         host.contains('sonyglobal.wd1.myworkdayjobs.com') ||
@@ -2785,13 +2970,15 @@ class ScraperService {
 
         for (final u in urls) {
           try {
-            final response = await _client.get(
-              Uri.parse(u),
-              headers: const {
-                'User-Agent':
-                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              },
-            ).timeout(const Duration(seconds: 15));
+            final response = await _client
+                .get(
+                  Uri.parse(u),
+                  headers: const {
+                    'User-Agent':
+                        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                  },
+                )
+                .timeout(const Duration(seconds: 15));
 
             if (response.statusCode == 200) {
               final body = response.body;
@@ -2815,12 +3002,13 @@ class ScraperService {
                   final link = href.startsWith('http')
                       ? href
                       : 'https://www.shopify.com$href';
-                  final key =
-                      '${title.toLowerCase()}|${link.toLowerCase()}';
+                  final key = '${title.toLowerCase()}|${link.toLowerCase()}';
 
                   if (!seen.contains(key)) {
                     seen.add(key);
-                    final locSpan = a.querySelector('.location span, span.text-sm');
+                    final locSpan = a.querySelector(
+                      '.location span, span.text-sm',
+                    );
                     final location =
                         locSpan?.text.trim() ?? 'Remote / Americas / EMEA';
                     final exp = parseExperience(title);
@@ -2856,8 +3044,7 @@ class ScraperService {
                 final title = m.group(1)!.trim();
                 final jid = m.group(2)!;
                 final link = 'https://www.shopify.com/careers?ashby_jid=$jid';
-                final key =
-                    '${title.toLowerCase()}|${link.toLowerCase()}';
+                final key = '${title.toLowerCase()}|${link.toLowerCase()}';
 
                 if (!seen.contains(key) &&
                     title.isNotEmpty &&
@@ -2895,12 +3082,14 @@ class ScraperService {
         final rows = <ScanResultRow>[];
         final seen = <String>{};
 
-        final response = await _client.get(
-          Uri.parse(
-            'https://signzy.keka.com/careers/api/embedjobs/default/active/54e30b3d-e138-4862-8055-8b2ce8c31009',
-          ),
-          headers: const {'accept': 'application/json, text/plain, */*'},
-        ).timeout(const Duration(seconds: 15));
+        final response = await _client
+            .get(
+              Uri.parse(
+                'https://signzy.keka.com/careers/api/embedjobs/default/active/54e30b3d-e138-4862-8055-8b2ce8c31009',
+              ),
+              headers: const {'accept': 'application/json, text/plain, */*'},
+            )
+            .timeout(const Duration(seconds: 15));
 
         if (response.statusCode == 200) {
           final jobs = jsonDecode(response.body) as List? ?? [];
@@ -2982,10 +3171,14 @@ class ScraperService {
 
         while (nextUrl != null) {
           try {
-            final response = await _client.get(
-              Uri.parse(nextUrl),
-              headers: const {'accept': 'application/json, text/plain, */*'},
-            ).timeout(const Duration(seconds: 15));
+            final response = await _client
+                .get(
+                  Uri.parse(nextUrl),
+                  headers: const {
+                    'accept': 'application/json, text/plain, */*',
+                  },
+                )
+                .timeout(const Duration(seconds: 15));
 
             if (response.statusCode == 200) {
               final data = jsonDecode(response.body);
@@ -3005,19 +3198,28 @@ class ScraperService {
                   if (!seen.contains(key)) {
                     seen.add(key);
 
-                    final locationStr = (item['location'] ??
-                            item['country'] ??
-                            'Bengaluru, India')
-                        .toString()
-                        .trim();
+                    final locationStr =
+                        (item['location'] ??
+                                item['country'] ??
+                                'Bengaluru, India')
+                            .toString()
+                            .trim();
 
                     final minExp = item['min_experience'];
                     final maxExp = item['max_experience'];
                     String exp = '—';
                     if (minExp != null || maxExp != null) {
-                      final minVal = (minExp ?? 0).toString().replaceAll('.0', '');
-                      final maxVal = (maxExp ?? '').toString().replaceAll('.0', '');
-                      exp = maxVal.isNotEmpty ? '$minVal-$maxVal years' : '$minVal+ years';
+                      final minVal = (minExp ?? 0).toString().replaceAll(
+                        '.0',
+                        '',
+                      );
+                      final maxVal = (maxExp ?? '').toString().replaceAll(
+                        '.0',
+                        '',
+                      );
+                      exp = maxVal.isNotEmpty
+                          ? '$minVal-$maxVal years'
+                          : '$minVal+ years';
                     } else {
                       exp = parseExperience(title);
                     }
@@ -3060,13 +3262,15 @@ class ScraperService {
         final rows = <ScanResultRow>[];
         final seen = <String>{};
 
-        final response = await _client.get(
-          Uri.parse('https://www.smartowner.com/so/of/career.htm'),
-          headers: const {
-            'User-Agent':
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          },
-        ).timeout(const Duration(seconds: 15));
+        final response = await _client
+            .get(
+              Uri.parse('https://www.smartowner.com/so/of/career.htm'),
+              headers: const {
+                'User-Agent':
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              },
+            )
+            .timeout(const Duration(seconds: 15));
 
         if (response.statusCode == 200) {
           final doc = html_parser.parse(response.body);
@@ -3100,7 +3304,9 @@ class ScraperService {
             if (lines.isNotEmpty) {
               final title = lines[0];
 
-              if (validJobKeywords.any((k) => title.toLowerCase().contains(k)) &&
+              if (validJobKeywords.any(
+                    (k) => title.toLowerCase().contains(k),
+                  ) &&
                   !title.toLowerCase().contains('privacy') &&
                   !title.toLowerCase().contains('cookie') &&
                   !title.toLowerCase().contains('term')) {
@@ -3162,31 +3368,40 @@ class ScraperService {
         final rows = <ScanResultRow>[];
         final seen = <String>{};
 
-        final feedId = careerUri.queryParameters['feedid'] ??
+        final feedId =
+            careerUri.queryParameters['feedid'] ??
             careerUri.queryParameters['feedId'] ??
             '363857';
         final rssUri = Uri.parse(
           'https://jobs.standardchartered.com/services/rss/job/?feedid=$feedId',
         );
 
-        final response = await _client.get(
-          rssUri,
-          headers: const {
-            'User-Agent':
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          },
-        ).timeout(const Duration(seconds: 15));
+        final response = await _client
+            .get(
+              rssUri,
+              headers: const {
+                'User-Agent':
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              },
+            )
+            .timeout(const Duration(seconds: 15));
 
         if (response.statusCode == 200) {
-          final itemMatches = RegExp(r'<item>(.*?)</item>', dotAll: true)
-              .allMatches(response.body);
+          final itemMatches = RegExp(
+            r'<item>(.*?)</item>',
+            dotAll: true,
+          ).allMatches(response.body);
 
           for (final m in itemMatches) {
             final itemXml = m.group(1)!;
-            final titleMatch = RegExp(r'<title>(.*?)</title>', dotAll: true)
-                .firstMatch(itemXml);
-            final linkMatch = RegExp(r'<link>(.*?)</link>', dotAll: true)
-                .firstMatch(itemXml);
+            final titleMatch = RegExp(
+              r'<title>(.*?)</title>',
+              dotAll: true,
+            ).firstMatch(itemXml);
+            final linkMatch = RegExp(
+              r'<link>(.*?)</link>',
+              dotAll: true,
+            ).firstMatch(itemXml);
 
             var fullTitle = (titleMatch?.group(1) ?? '')
                 .replaceAll('<![CDATA[', '')
@@ -3206,8 +3421,9 @@ class ScraperService {
             final locMatch = RegExp(r'\(([^()]+)\)$').firstMatch(fullTitle);
             if (locMatch != null) {
               locationStr = locMatch.group(1)!.trim();
-              fullTitle =
-                  fullTitle.replaceAll(RegExp(r'\s*\([^()]+\)$'), '').trim();
+              fullTitle = fullTitle
+                  .replaceAll(RegExp(r'\s*\([^()]+\)$'), '')
+                  .trim();
             }
 
             final key = '${fullTitle.toLowerCase()}|${applyLink.toLowerCase()}';
@@ -3246,33 +3462,61 @@ class ScraperService {
         if (tenant == 'app' || tenant == 'careers') tenant = 'starbucks';
         final domain = careerUri.queryParameters['domain'] ?? '$tenant.com';
 
-        const limit = 2000;
-        final hardTimeout = const Duration(seconds: 30);
+        const maxTotal = 2000;
+        const batchSize =
+            10; // 10 concurrent requests per batch (100 jobs/batch)
+        final totalPages = (maxTotal / 10).ceil();
+        final hardTimeout = const Duration(seconds: 120);
         final stopwatch = Stopwatch()..start();
 
-        for (var start = 0; start < limit; start += 10) {
-          if (stopwatch.elapsed > hardTimeout) break;
+        for (
+          var pageBatchStart = 0;
+          pageBatchStart < totalPages;
+          pageBatchStart += batchSize
+        ) {
+          if (rows.length >= maxTotal || stopwatch.elapsed > hardTimeout) break;
 
-          final apiUrl = Uri.parse(
-            'https://$host/api/pcsx/search?domain=$domain&sort_by=timestamp&start=$start',
+          final batchOffsets = <int>[];
+          for (
+            var i = 0;
+            i < batchSize && (pageBatchStart + i) < totalPages;
+            i++
+          ) {
+            batchOffsets.add((pageBatchStart + i) * 10);
+          }
+
+          final responses = await Future.wait(
+            batchOffsets.map((startOffset) async {
+              try {
+                final apiUrl = Uri.parse(
+                  'https://$host/api/pcsx/search?domain=$domain&sort_by=timestamp&start=$startOffset',
+                );
+
+                final response = await _client
+                    .get(
+                      apiUrl,
+                      headers: const {
+                        'User-Agent':
+                            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Accept': 'application/json, text/plain, */*',
+                      },
+                    )
+                    .timeout(const Duration(seconds: 12));
+
+                if (response.statusCode == 200) {
+                  final data =
+                      jsonDecode(response.body)['data']
+                          as Map<String, dynamic>? ??
+                      {};
+                  return data['positions'] as List<dynamic>? ?? [];
+                }
+              } catch (_) {}
+              return <dynamic>[];
+            }),
           );
 
-          final response = await _client.get(
-            apiUrl,
-            headers: const {
-              'User-Agent':
-                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              'Accept': 'application/json, text/plain, */*',
-            },
-          ).timeout(const Duration(seconds: 12));
-
-          if (response.statusCode == 200) {
-            final data =
-                jsonDecode(response.body)['data'] as Map<String, dynamic>? ?? {};
-            final positions = data['positions'] as List<dynamic>? ?? [];
-
-            if (positions.isEmpty) break;
-
+          var newInBatch = 0;
+          for (final positions in responses) {
             for (final p in positions) {
               final title = (p['name'] as String? ?? 'Untitled').trim();
               final pid = (p['id'] ?? p['displayJobId'] ?? '').toString();
@@ -3304,15 +3548,12 @@ class ScraperService {
                     experience: parseExperience(title),
                   ),
                 );
+                newInBatch++;
               }
             }
-
-            if (positions.length < 10) break;
-          } else {
-            break;
           }
 
-          await Future.delayed(const Duration(milliseconds: 100));
+          if (newInBatch == 0) break;
         }
 
         return rows;
@@ -3326,13 +3567,15 @@ class ScraperService {
         final rows = <ScanResultRow>[];
         final seen = <String>{};
 
-        final response = await _client.get(
-          careerUri,
-          headers: const {
-            'User-Agent':
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          },
-        ).timeout(const Duration(seconds: 20));
+        final response = await _client
+            .get(
+              careerUri,
+              headers: const {
+                'User-Agent':
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              },
+            )
+            .timeout(const Duration(seconds: 20));
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
@@ -3763,9 +4006,9 @@ class ScraperService {
       try {
         final rows = <ScanResultRow>[];
         final seen = <String>{};
-        final response = await _client.get(
-          Uri.parse('https://www.revolut.com/careers/'),
-        ).timeout(const Duration(seconds: 15));
+        final response = await _client
+            .get(Uri.parse('https://www.revolut.com/careers/'))
+            .timeout(const Duration(seconds: 15));
 
         if (response.statusCode == 200) {
           final document = html_parser.parse(response.body);
@@ -3781,25 +4024,31 @@ class ScraperService {
                     final title = (job['text'] ?? '').toString().trim();
                     final jobId = (job['id'] ?? '').toString().trim();
                     if (title.isEmpty || jobId.isEmpty) continue;
-                    
-                    final applyLink = 'https://www.revolut.com/careers/position/$jobId';
-                    final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
-                    
+
+                    final applyLink =
+                        'https://www.revolut.com/careers/position/$jobId';
+                    final key =
+                        '${title.toLowerCase()}|${applyLink.toLowerCase()}';
+
                     if (!seen.contains(key)) {
                       seen.add(key);
-                      
+
                       String location = 'Not specified';
                       final locs = job['locations'];
                       if (locs is List && locs.isNotEmpty) {
-                        final locNames = locs.map((l) {
-                          if (l is Map) return (l['name'] ?? '').toString().trim();
-                          return '';
-                        }).where((l) => l.isNotEmpty).toList();
+                        final locNames = locs
+                            .map((l) {
+                              if (l is Map)
+                                return (l['name'] ?? '').toString().trim();
+                              return '';
+                            })
+                            .where((l) => l.isNotEmpty)
+                            .toList();
                         if (locNames.isNotEmpty) location = locNames.join(', ');
                       }
-                      
+
                       final exp = parseExperience(title);
-                      
+
                       rows.add(
                         ScanResultRow(
                           company: companyName,
@@ -3830,35 +4079,45 @@ class ScraperService {
 
     if (host.contains('rupeek.com')) {
       try {
-        final response = await _client.get(careerUri).timeout(const Duration(seconds: 15));
+        final response = await _client
+            .get(careerUri)
+            .timeout(const Duration(seconds: 15));
         if (response.statusCode == 200) {
           final html = response.body;
           final cleanHtml = html.replaceAll(r'\"', '"').replaceAll(r'\\"', '"');
           final parts = cleanHtml.split('https://www.linkedin.com/jobs/view/');
           final seen = <String>{};
           final rows = <ScanResultRow>[];
-          
+
           for (int i = 1; i < parts.length; i++) {
             final part = parts[i];
             final urlEnd = part.indexOf('"');
             if (urlEnd == -1) continue;
-            
+
             final urlSlug = part.substring(0, urlEnd);
             final applyLink = 'https://www.linkedin.com/jobs/view/$urlSlug';
             if (seen.contains(applyLink)) continue;
             seen.add(applyLink);
-            
+
             String title = '';
             if (urlSlug.contains('-at-')) {
               final rawTitle = urlSlug.split('-at-').first;
-              title = rawTitle.replaceAll('-', ' ').split(' ').map((s) => s.isNotEmpty ? '${s[0].toUpperCase()}${s.substring(1)}' : '').join(' ');
+              title = rawTitle
+                  .replaceAll('-', ' ')
+                  .split(' ')
+                  .map(
+                    (s) => s.isNotEmpty
+                        ? '${s[0].toUpperCase()}${s.substring(1)}'
+                        : '',
+                  )
+                  .join(' ');
             } else {
               title = urlSlug;
             }
             if (title.isEmpty) continue;
-            
+
             final exp = parseExperience(title);
-            
+
             rows.add(
               ScanResultRow(
                 company: companyName,
@@ -3885,43 +4144,52 @@ class ScraperService {
     if (host.contains('personio.com') || host.contains('personio.de')) {
       try {
         final xmlUri = Uri.parse('https://${careerUri.host}/xml');
-        final response = await _client.get(xmlUri).timeout(const Duration(seconds: 15));
+        final response = await _client
+            .get(xmlUri)
+            .timeout(const Duration(seconds: 15));
         if (response.statusCode == 200) {
           final xml = response.body;
           final regex = RegExp(r'<position>.*?</position>', dotAll: true);
           final idRegex = RegExp(r'<id>(.*?)</id>');
           final nameRegex = RegExp(r'<name>(.*?)</name>');
           final officeRegex = RegExp(r'<office>(.*?)</office>');
-          final expRegex = RegExp(r'<yearsOfExperience>(.*?)</yearsOfExperience>');
-          
+          final expRegex = RegExp(
+            r'<yearsOfExperience>(.*?)</yearsOfExperience>',
+          );
+
           final rows = <ScanResultRow>[];
           final matches = regex.allMatches(xml);
-          
+
           for (var match in matches) {
             final block = match.group(0)!;
             final id = idRegex.firstMatch(block)?.group(1)?.trim() ?? '';
             var title = nameRegex.firstMatch(block)?.group(1)?.trim() ?? '';
             // Remove CDATA if present
             title = title.replaceAll('<![CDATA[', '').replaceAll(']]>', '');
-            
-            final office = officeRegex.firstMatch(block)?.group(1)?.trim() ?? 'Not specified';
+
+            final office =
+                officeRegex.firstMatch(block)?.group(1)?.trim() ??
+                'Not specified';
             final expYears = expRegex.firstMatch(block)?.group(1)?.trim() ?? '';
-            
+
             if (id.isEmpty || title.isEmpty) continue;
-            
+
             final applyLink = 'https://${careerUri.host}/job/$id';
-            
+
             var exp = parseExperience(title);
             if (exp == '—' && expYears.isNotEmpty) {
-              if (expYears.toLowerCase().contains('entry') || expYears.contains('< 1') || expYears.contains('0-')) {
+              if (expYears.toLowerCase().contains('entry') ||
+                  expYears.contains('< 1') ||
+                  expYears.contains('0-')) {
                 exp = 'Entry Level';
-              } else if (expYears.contains('senior') || expYears.contains('5')) {
+              } else if (expYears.contains('senior') ||
+                  expYears.contains('5')) {
                 exp = 'Senior Level';
               } else {
                 exp = 'Mid Level';
               }
             }
-            
+
             rows.add(
               ScanResultRow(
                 company: companyName,
@@ -11832,7 +12100,9 @@ class ScraperService {
     }
 
     if ((host.contains('oraclecloud.com') &&
-            careerUri.path.toLowerCase().contains('/hcmui/candidateexperience/')) ||
+            careerUri.path.toLowerCase().contains(
+              '/hcmui/candidateexperience/',
+            )) ||
         (host.contains('oracle.com') &&
             careerUri.path.toLowerCase().contains('/sites/jobsearch/'))) {
       try {
@@ -11884,7 +12154,8 @@ class ScraperService {
                 sitesUri,
                 headers: {
                   'user-agent':
-                      userAgents[DateTime.now().millisecond % userAgents.length],
+                      userAgents[DateTime.now().millisecond %
+                          userAgents.length],
                   'accept': 'application/json, text/plain, */*',
                   'referer': careerUri.toString(),
                 },
@@ -11923,7 +12194,8 @@ class ScraperService {
         for (final sn in siteCandidates) {
           final cleanSn = sn.replaceAll("'", '');
           final firstLimit = 200;
-          final firstFinder = 'findReqs;siteNumber=$cleanSn,limit=$firstLimit,offset=0';
+          final firstFinder =
+              'findReqs;siteNumber=$cleanSn,limit=$firstLimit,offset=0';
           final firstUri = Uri.https(
             apiHost,
             '/hcmRestApi/resources/latest/recruitingCEJobRequisitions',
@@ -11935,15 +12207,18 @@ class ScraperService {
             },
           );
 
-          final firstResp = await _client.get(
-            firstUri,
-            headers: {
-              'user-agent':
-                  userAgents[DateTime.now().millisecond % userAgents.length],
-              'accept': 'application/json, text/plain, */*',
-              'referer': careerUri.toString(),
-            },
-          ).timeout(const Duration(seconds: 15));
+          final firstResp = await _client
+              .get(
+                firstUri,
+                headers: {
+                  'user-agent':
+                      userAgents[DateTime.now().millisecond %
+                          userAgents.length],
+                  'accept': 'application/json, text/plain, */*',
+                  'referer': careerUri.toString(),
+                },
+              )
+              .timeout(const Duration(seconds: 15));
 
           if (firstResp.statusCode >= 400 || firstResp.body.trim().isEmpty) {
             continue;
@@ -11973,23 +12248,26 @@ class ScraperService {
                       .trim();
               if (title.isEmpty) continue;
 
-              final desc = (((map['Description'] ?? map['JobDescription']) ??
-                          map['ExternalDescription']) ??
-                      map['ShortDescriptionStr'])
-                  .toString()
-                  .trim();
-              final location = ((map['PrimaryLocation'] ?? map['Location']) ??
-                      map['Locations'])
-                  .toString()
-                  .trim();
+              final desc =
+                  (((map['Description'] ?? map['JobDescription']) ??
+                              map['ExternalDescription']) ??
+                          map['ShortDescriptionStr'])
+                      .toString()
+                      .trim();
+              final location =
+                  ((map['PrimaryLocation'] ?? map['Location']) ??
+                          map['Locations'])
+                      .toString()
+                      .trim();
 
               if (matchTerms.isNotEmpty) {
                 final titleLower = title.toLowerCase();
                 final descLower = desc.toLowerCase();
                 final locLower = location.toLowerCase();
                 final exactWordMatch = matchTerms.any((kw) {
-                  final pattern =
-                      RegExp('\\b${RegExp.escape(kw.toLowerCase())}\\b');
+                  final pattern = RegExp(
+                    '\\b${RegExp.escape(kw.toLowerCase())}\\b',
+                  );
                   return pattern.hasMatch(titleLower) ||
                       pattern.hasMatch(descLower) ||
                       pattern.hasMatch(locLower);
@@ -12008,8 +12286,8 @@ class ScraperService {
               final applyLink = rawLink.isNotEmpty
                   ? rawLink
                   : (id.isEmpty
-                      ? careerUri.toString()
-                      : '${careerUri.scheme}://${careerUri.host}/hcmUI/CandidateExperience/en/sites/$siteUrlName/job/$id');
+                        ? careerUri.toString()
+                        : '${careerUri.scheme}://${careerUri.host}/hcmUI/CandidateExperience/en/sites/$siteUrlName/job/$id');
 
               final key = '${title.toLowerCase()}|${applyLink.toLowerCase()}';
               if (seen.contains(key)) continue;
@@ -12051,7 +12329,11 @@ class ScraperService {
 
           final futures = <Future<void>>[];
           final limit = 200;
-          for (int offset = limit; offset < totalJobs + limit; offset += limit) {
+          for (
+            int offset = limit;
+            offset < totalJobs + limit;
+            offset += limit
+          ) {
             final currentOffset = offset;
             futures.add(() async {
               final finder =
@@ -12068,15 +12350,18 @@ class ScraperService {
               );
 
               try {
-                final resp = await _client.get(
-                  reqUri,
-                  headers: {
-                    'user-agent': userAgents[
-                        DateTime.now().millisecond % userAgents.length],
-                    'accept': 'application/json, text/plain, */*',
-                    'referer': careerUri.toString(),
-                  },
-                ).timeout(const Duration(seconds: 15));
+                final resp = await _client
+                    .get(
+                      reqUri,
+                      headers: {
+                        'user-agent':
+                            userAgents[DateTime.now().millisecond %
+                                userAgents.length],
+                        'accept': 'application/json, text/plain, */*',
+                        'referer': careerUri.toString(),
+                      },
+                    )
+                    .timeout(const Duration(seconds: 15));
 
                 if (resp.statusCode == 200) {
                   final pageDecoded = jsonDecode(resp.body);
@@ -14087,7 +14372,8 @@ class ScraperService {
 
         for (final entry in careerUri.queryParametersAll.entries) {
           final key = entry.key.toLowerCase();
-          if (key.contains('country') || key.contains('normalized_country_code')) {
+          if (key.contains('country') ||
+              key.contains('normalized_country_code')) {
             for (final v in entry.value) {
               var val = v.trim().toUpperCase();
               if (val.length == 2) {
@@ -14186,8 +14472,12 @@ class ScraperService {
                       .toString()
                       .trim();
 
-              final basicQuals = (map['basic_qualifications'] ?? '').toString().trim();
-              final prefQuals = (map['preferred_qualifications'] ?? '').toString().trim();
+              final basicQuals = (map['basic_qualifications'] ?? '')
+                  .toString()
+                  .trim();
+              final prefQuals = (map['preferred_qualifications'] ?? '')
+                  .toString()
+                  .trim();
               final fullText = '$basicQuals\n$prefQuals\n$description';
               final exp = parseExperience(fullText);
 
