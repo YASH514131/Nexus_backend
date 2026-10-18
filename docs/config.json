@@ -1,7 +1,7 @@
 {
-  "version": "2026-10-18T02:36:35Z",
+  "version": "2026-10-18T10:17:09Z",
   "dataset_url": "https://huggingface.co/datasets/Yash514311/nexus-jobs/resolve/main/jobs.zip",
-  "hash": "538e60aecded4eed347c2137db8f8be266cd6778dd9fe8c4d85f0c70fcd730d4",
+  "hash": "7f90965fee0e5ad97ead99a3fc354bd23fdde723bc164d0b14ab20ec3f1dc918",
   "min_app_version": "3.0.0",
-  "new_job_count": 3472
+  "new_job_count": 3852
 }
